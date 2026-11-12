@@ -10,7 +10,7 @@ function detailedStats(rows){
     under5:rows.filter(r=>r.score<5).length,perfect:rows.filter(r=>r.score===10).length};
 }
 function scoreHistogram(rows,width){const count=Math.round(10/width), values=Array(count+1).fill(0);for(const r of rows)values[Math.min(count,Math.floor((r.score+1e-9)/width))]++;return {labels:values.map((_,i)=>i===count?'10':number(i*width)+'–<'+number((i+1)*width)),values};}
-function scopeText(){return [$('year').value,picked('period').join(', ')||'Tất cả các kỳ',picked('grade').length?'Khối '+picked('grade').join(', '):'Tất cả khối',picked('subject').join(', ')||'Tất cả môn',picked('class').length?'Lớp '+picked('class').join(', '):'Tất cả lớp',isGrade12Scope()?'Thi TN: '+($('thiTN').value||'Tất cả'):'',demo?'Dữ liệu minh họa':''].filter(Boolean).join(' · ');}
+function scopeText(){return [$('year').value,picked('period').join(', ')||'Tất cả các kỳ',picked('grade').length?'Khối '+picked('grade').join(', '):'Tất cả khối',picked('subject').join(', ')||'Tất cả môn',picked('class').length?'Lớp '+picked('class').join(', '):'Tất cả lớp',!$('tnField').hidden?'Thi TN: '+($('thiTN').value||'Tất cả'):'',demo?'Dữ liệu minh họa':''].filter(Boolean).join(' · ');}
 function statRows(s,threshold=settings.threshold){const pct=x=>number(x)+' ('+number(x/s.n*100)+'%)';return [
   ['Số lượt điểm',number(s.n)],['Số học sinh có điểm',number(s.students)],['Điểm trung bình',number(s.avg)],['Điểm trung vị',number(s.median)],
   ['Điểm xuất hiện nhiều nhất',s.modes.slice(0,8).map(number).join('; ')+(s.modes.length>8?' … ('+s.modes.length+' mức đồng hạng)':'')],
@@ -30,7 +30,13 @@ function classRows(){return filtered().sort((a,b)=>a.class.localeCompare(b.class
 function renderClassDetails(){const selected=picked('class');$('classDetails').hidden=!selected.length;const a=classRows();$('classDetailScope').textContent=selected.join(', ')+' · '+number(a.length)+' lượt điểm · '+(picked('subject').join(', ')||'Tất cả môn');classReportPage=Math.min(classReportPage,Math.max(0,Math.ceil(a.length/50)-1));$('classDetailBody').innerHTML=a.slice(classReportPage*50,classReportPage*50+50).map(r=>'<tr>'+[r.class,r.student,r.subject,r.period,number(r.score),tnValue(r)].map(x=>'<td>'+esc(x)+'</td>').join('')+'</tr>').join('')||'<tr><td colspan="6">Chưa có điểm trong phạm vi đang chọn.</td></tr>';$('classPageInfo').textContent='Trang '+(classReportPage+1)+' / '+Math.max(1,Math.ceil(a.length/50));$('classPrev').disabled=classReportPage===0;$('classNext').disabled=(classReportPage+1)*50>=a.length;$('exportClass').disabled=!a.length;}
 $('classPrev').onclick=()=>{classReportPage--;renderClassDetails();};$('classNext').onclick=()=>{classReportPage++;renderClassDetails();};$('exportClass').onclick=()=>exportBook([HEADERS,...classRows().map(r=>[r.year,r.period,r.grade,r.class,r.subject,r.student,r.score,r.thiTN||''])],(demo?'Minh_hoa_':'')+'Diem_lop.xlsx');$('binWidth').onchange=render;
 let pdfFont=null;
-function buildExportJobs(rows){const jobs=[];for(const grade of unique(rows.map(r=>Number(r.grade))).sort((a,b)=>a-b))for(const subject of unique(rows.filter(r=>Number(r.grade)===grade).map(r=>r.subject))){const data=rows.filter(r=>Number(r.grade)===grade&&r.subject===subject),split=grade===12&&!['toan','nguvan'].includes(plainKey(canonicalSubject(subject)));jobs.push({grade,subject,data,split,panels:split?[{label:'CHỌN THI TN',data:data.filter(r=>r.thiTN==='Chọn')},{label:'KHÔNG CHỌN THI TN',data:data.filter(r=>r.thiTN==='Không chọn')}]:[{label:grade===12?'THỐNG KÊ CHUNG — KHÔNG TÁCH THI TN':'THỐNG KÊ CHUNG',data}],unmarked:split?data.filter(r=>!['Chọn','Không chọn'].includes(r.thiTN)):[]});}return jobs;}
+function buildExportJobs(rows){
+ const jobs=[];for(const grade of unique(rows.map(r=>Number(r.grade))).sort((a,b)=>a-b))for(const subject of unique(rows.filter(r=>Number(r.grade)===grade).map(r=>r.subject))){
+  const data=rows.filter(r=>Number(r.grade)===grade&&r.subject===subject),eligible=grade===12&&!isCommonTNSubject(subject),chosen=data.filter(r=>r.thiTN==='Chọn'),notChosen=data.filter(r=>r.thiTN==='Không chọn'),unmarked=eligible?data.filter(r=>!['Chọn','Không chọn'].includes(r.thiTN)):[],split=eligible&&(chosen.length+notChosen.length)>0;
+  jobs.push({grade,subject,data,split,panels:split?[{label:'CHỌN THI TN',data:chosen},{label:'KHÔNG CHỌN THI TN',data:notChosen}]:[{label:eligible?'TOÀN BỘ ĐIỂM - CHƯA PHÂN NHÓM TN':grade===12?'THỐNG KÊ CHUNG — KHÔNG TÁCH THI TN':'THỐNG KÊ CHUNG',data}],unmarked});
+ }return jobs;
+}
+
 async function exportPDF(options=null){
  const custom=options&&Array.isArray(options.rows),dataSource=custom?options.rows:hasChosenReportScope()?baseFiltered():[];
  if(pdfBusy)throw Error('Đang tạo PDF khác, hãy thử lại.');if(!dataSource.length)return;
@@ -41,6 +47,9 @@ async function exportPDF(options=null){
   if(!pdfFont&&window.HTB_PDF_FONT)pdfFont=window.HTB_PDF_FONT;
   if(!pdfFont){const res=await fetch('vendor/DejaVuSans.ttf');if(!res.ok)throw Error('Không tải được phông chữ tiếng Việt.');const bytes=new Uint8Array(await res.arrayBuffer());let str='';for(let i=0;i<bytes.length;i+=8192)str+=String.fromCharCode(...bytes.subarray(i,i+8192));pdfFont=btoa(str);}
   const doc=new jspdf.jsPDF({orientation:'landscape',unit:'mm',format:'a4',compress:true});doc.addFileToVFS('DejaVuSans.ttf',pdfFont);doc.addFont('DejaVuSans.ttf','VN','normal');doc.setFont('VN','normal');doc.setProperties({title,subject:scopeParts.join(' · '),creator:'HTB Phổ Điểm'});
+  let headerFonts=window.HTB_HQGD_SERIF;try{const saved=JSON.parse(localStorage.getItem('htb.hqgd.pdf.fonts')||'null');if(saved?.normal&&saved?.bold)headerFonts=saved;}catch{}
+  const headerFamily=headerFonts?'ReportHeader':'VN';if(headerFonts){doc.addFileToVFS('ReportHeader-Regular.ttf',headerFonts.normal);doc.addFileToVFS('ReportHeader-Bold.ttf',headerFonts.bold);doc.addFont('ReportHeader-Regular.ttf',headerFamily,'normal');doc.addFont('ReportHeader-Bold.ttf',headerFamily,'bold');}
+
   async function plot(rows,x,y,w,h){
    if(!rows.length){doc.setDrawColor(200,215,235);doc.rect(x,y,w,h);doc.setTextColor(90,110,140);doc.setFontSize(10);doc.text('Chưa có điểm trong nhóm này',x+w/2,y+h/2,{align:'center'});return;}
    const canvas=document.createElement('canvas');canvas.width=w<200?850:1500;canvas.height=Math.round(canvas.width*h/w);canvas.style.position='fixed';canvas.style.left='-10000px';document.body.appendChild(canvas);let temp;
@@ -48,18 +57,25 @@ async function exportPDF(options=null){
   }
   const tableBase={styles:{font:'VN',fontStyle:'normal',fontSize:8,cellPadding:1.2,textColor:[30,58,95],overflow:'linebreak'},headStyles:{fillColor:[28,83,170],textColor:[255,255,255],fontStyle:'normal'},alternateRowStyles:{fillColor:[238,245,255]},margin:{left:14,right:14,bottom:13}};
   for(let index=0;index<jobs.length;index++){
-   const job=jobs[index];if(index)doc.addPage();doc.setFont('VN','normal');doc.setFontSize(13);const titleLines=doc.splitTextToSize(title+' · '+job.subject+' · Khối '+job.grade+(isDemo?' · MINH HỌA':''),269),headerHeight=24+titleLines.length*5.5;doc.setFillColor(20,66,140);doc.rect(0,0,297,headerHeight,'F');doc.setTextColor(255,255,255);doc.setFontSize(18);doc.text('TRƯỜNG THPT HỒ THỊ BI',14,12);doc.setFontSize(13);doc.text(titleLines,14,21);
-   doc.setTextColor(40,70,110);doc.setFontSize(8);const scope=scopeParts.filter(p=>!/^Khối |^Tất cả khối/.test(p)).concat('Khối '+job.grade),scopeLines=doc.splitTextToSize(scope.join(' · '),269);doc.text(scopeLines,14,headerHeight+5);let y=headerHeight+7+scopeLines.length*3.5;
+   const job=jobs[index];if(index)doc.addPage();
+   doc.setTextColor(0,0,0);doc.setFont(headerFamily,headerFonts?'bold':'normal');doc.setFontSize(12);doc.text('TRƯỜNG THPT HỒ THỊ BI',14,12);
+   const reportHeading=(title==='PHỔ ĐIỂM & BÁO CÁO TỔNG'?'KẾT QUẢ DẠY - HỌC MÔN ':title+' - MÔN ')+job.subject.toLocaleUpperCase('vi')+(isDemo?' - MINH HỌA':'');
+   doc.setFontSize(14);const titleLines=doc.splitTextToSize(reportHeading,269);doc.text(titleLines,148.5,21,{align:'center'});
+   const reportYears=unique(job.data.map(r=>r.year)).join(', '),reportPeriods=PERIODS.filter(p=>job.data.some(r=>r.period===p)).join(', '),periodY=21+titleLines.length*5.5;
+   doc.setFontSize(10);const periodLines=doc.splitTextToSize((reportPeriods||'Tất cả kỳ')+' ('+reportYears+')',269);doc.text(periodLines,148.5,periodY,{align:'center'});
+   doc.setFont(headerFamily,'normal');doc.setFontSize(8);const classScope=unique(job.data.map(r=>r.class)),scopeLabel='Khối '+job.grade+(classScope.length===1?' - Lớp '+classScope[0]:''),scopeY=periodY+periodLines.length*4.5;doc.text(scopeLabel,148.5,scopeY,{align:'center'});
+   doc.setFont('VN','normal');doc.setTextColor(40,70,110);let y=scopeY+7;
+
    if(job.split){
     const full=detailedStats(job.data),meta='Tổng toàn môn: '+number(full.n)+' lượt điểm · ĐTB '+number(full.avg)+' · Chọn TN: '+number(job.panels[0].data.length)+' · Không chọn TN: '+number(job.panels[1].data.length)+' · Chưa khai báo: '+number(job.unmarked.length);
     doc.text(doc.splitTextToSize(meta,269),14,y);y+=7;
     for(let j=0;j<2;j++){const panel=job.panels[j],x=14+j*137,w=132;doc.setFontSize(11);doc.setTextColor(25,70,140);doc.text(panel.label,x,y);await plot(panel.data,x,y+4,w,57);const stat=panel.data.length?statRows(detailedStats(panel.data),threshold):[['Số lượt điểm','0'],['Điểm trung bình','—'],['Trạng thái','Chưa có dữ liệu']];doc.autoTable({...tableBase,startY:y+65,tableWidth:w,margin:{left:x,right:297-x-w,bottom:20},head:[['Thống kê nhóm','Số liệu']],body:stat,styles:{...tableBase.styles,fontSize:7.5,cellPadding:1.2},columnStyles:{0:{cellWidth:78},1:{cellWidth:54}}});}
-    doc.setFontSize(7.5);doc.setTextColor(65,92,128);doc.text('Chưa khai báo Thi TN: '+job.unmarked.length+' lượt, có trong tổng toàn môn nhưng chưa phân vào hai biểu đồ.',14,195);
+
    }else{
     doc.setFontSize(9);doc.text(job.panels[0].label,14,y);await plot(job.data,14,y+3,269,64);const stats=detailedStats(job.data),hist=scoreHistogram(job.data,width),tableY=y+73;doc.autoTable({...tableBase,startY:tableY,tableWidth:142,margin:{left:14,right:141,bottom:15},head:[['Báo cáo khối '+job.grade,'Số liệu']],body:[['Số lớp',String(unique(job.data.map(r=>r.class)).length)],...statRows(stats,threshold)],columnStyles:{0:{cellWidth:83},1:{cellWidth:59}}});
     const pairs=hist.labels.length>25?3:2,binRows=[];for(let i=0;i<hist.labels.length;i+=pairs){const line=[];for(let j=0;j<pairs;j++)line.push(hist.labels[i+j]??'',hist.values[i+j]??'');binRows.push(line);}doc.autoTable({...tableBase,startY:tableY,tableWidth:119,margin:{left:164,right:14,bottom:15},head:[Array.from({length:pairs},()=>['Điểm','Số lượt']).flat()],body:binRows,styles:{...tableBase.styles,fontSize:7.2,cellPadding:1}});
    }
-   doc.setFont('VN','normal');doc.setFontSize(7);doc.setTextColor(65,92,128);doc.text('Tỷ lệ tính trên lượt điểm trong từng nhóm. Báo cáo tách riêng từng khối và môn.',14,203);doc.text('Trang '+(index+1)+' / '+jobs.length,283,203,{align:'right'});
+   doc.setFont('VN','normal');doc.setFontSize(7);doc.setTextColor(65,92,128);doc.text('Trang '+(index+1)+' / '+jobs.length,283,203,{align:'right'});
    if(doc.getNumberOfPages()!==index+1)throw Error('Tiêu đề hoặc thống kê quá dài ở '+job.subject+' khối '+job.grade+'. Rút gọn tiêu đề hoặc chọn phạm vi hẹp hơn.');
   }
   if(custom)return doc.output('blob');doc.save((isDemo?'Minh_hoa_':'')+'Pho_diem_Theo_khoi_va_mon.pdf');toast('Đã xuất '+jobs.length+' trang, tách khối và môn; khối 12 tách Thi TN theo quy định.');
