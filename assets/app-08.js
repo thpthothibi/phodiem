@@ -59,7 +59,7 @@ async function exportPDF(options=null){
   for(let index=0;index<jobs.length;index++){
    const job=jobs[index];if(index)doc.addPage();
    doc.setTextColor(0,0,0);doc.setFont(headerFamily,headerFonts?'bold':'normal');doc.setFontSize(12);doc.text('TRƯỜNG THPT HỒ THỊ BI',14,12);
-   const reportHeading=(title==='PHỔ ĐIỂM & BÁO CÁO TỔNG'?'KẾT QUẢ DẠY - HỌC MÔN ':title+' - MÔN ')+job.subject.toLocaleUpperCase('vi')+(isDemo?' - MINH HỌA':'');
+   const reportHeading=(title==='PHỔ ĐIỂM & BÁO CÁO TỔNG'?'PHỔ ĐIỂM MÔN ':title+' - MÔN ')+job.subject.toLocaleUpperCase('vi')+(isDemo?' - MINH HỌA':'');
    doc.setFontSize(14);const titleLines=doc.splitTextToSize(reportHeading,269);doc.text(titleLines,148.5,21,{align:'center'});
    const reportYears=unique(job.data.map(r=>r.year)).join(', '),reportPeriods=PERIODS.filter(p=>job.data.some(r=>r.period===p)).join(', '),periodY=21+titleLines.length*5.5;
    doc.setFontSize(10);const periodLines=doc.splitTextToSize((reportPeriods||'Tất cả kỳ')+' ('+reportYears+')',269);doc.text(periodLines,148.5,periodY,{align:'center'});
