@@ -1,6 +1,6 @@
 // Reporting selection over original HQGD results. No original source formulas are changed.
 export const PERIOD_OPTIONS=[['gk1','Giữa HK1'],['hk1','HK1'],['gk2','Giữa HK2'],['hk2','HK2'],['annual','Cả năm']];
-export function periodLabel(id,combined){const label=PERIOD_OPTIONS.find(p=>p[0]===id)?.[1]||id;return id==='annual'?'Cả năm · đủ bốn đợt':id.startsWith('hk')?label+(combined?' · Chung với giữa kỳ':' · Riêng học kỳ'):label+' · Riêng giữa kỳ';}
+export function periodLabel(id,combined){const label=PERIOD_OPTIONS.find(p=>p[0]===id)?.[1]||id;return id==='annual'?'Cả năm · đủ bốn đợt':id.startsWith('hk')?label+(combined?' · Chung với giữa kỳ':' · Riêng học kỳ'):label;}
 const rank=(v,all)=>v==null?null:1+all.filter(x=>x!=null&&x>v+1e-10).length;
 export function selectPeriod(partition,id='hk1',combined=true){
  const report=partition.report,year=id==='annual',term=id.endsWith('2')?2:1,base=term===1?report.first:report.second;
