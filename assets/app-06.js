@@ -5,10 +5,15 @@ function canonicalSubject(value){const s=String(value??'').trim().replace(/\s+/g
 function canonicalClass(value){return String(value??'').trim().replace(/^lớp\s*/i,'').replace(/\s+/g,'').toUpperCase();}
 function recordKey(r){return JSON.stringify([r.year,r.period,canonicalClass(r.class),canonicalSubject(r.subject).toLocaleLowerCase('vi'),String(r.student).trim().toLowerCase()]);}
 function normalizedRecords(rows){const seen=new Set(),errors=[],result=rows.map((r,i)=>{const n={...r,class:canonicalClass(r.class),subject:canonicalSubject(r.subject),student:String(r.student??'').trim()};const k=recordKey(n);if(seen.has(k))errors.push('Dòng '+(i+1)+' trùng khóa sau khi chuẩn hóa môn/lớp.');seen.add(k);return n;});return {records:result,errors};}
+function validateHQGDAssignments(value,years){
+ if(value===undefined)return [];
+ if(!Array.isArray(value)||value.length>10000)throw Error('Phân công HQGD không hợp lệ hoặc vượt 10.000 dòng.');
+ const seen=new Set();return value.map(a=>{if(!a||!years.includes(a.year)||[a.subject,a.class].some(v=>typeof v!=='string'||!v.trim()||v.length>100)||[a.teacher1,a.teacher2].some(v=>typeof v!=='string'||v.length>100))throw Error('Có dòng phân công HQGD không hợp lệ.');const k=JSON.stringify([a.year,a.subject,a.class]);if(seen.has(k))throw Error('Trùng phân công HQGD năm/môn/lớp.');seen.add(k);return {year:a.year,subject:a.subject,class:a.class,teacher1:a.teacher1.trim(),teacher2:a.teacher2.trim()};});
+}
 function validateCloudPayload(value){
  if(!value||!Array.isArray(value.records)||value.records.length>50000)throw Error('Kho dữ liệu không đúng cấu trúc hoặc vượt 50.000 lượt điểm.');
  const years=value.settings?.years;if(!Array.isArray(years)||!years.length||years.some(y=>!/^\d{4}-\d{4}$/.test(y)||Number(y.slice(5))!==Number(y.slice(0,4))+1)||!years.includes(value.settings.defaultYear)||!Number.isFinite(value.settings.threshold)||value.settings.threshold<0||value.settings.threshold>10)throw Error('Cài đặt năm học/ngưỡng điểm trong kho không hợp lệ.');
  const periods=['Giữa HK1','HK1','Giữa HK2','HK2'];
  for(const r of value.records){if(!years.includes(r.year)||!periods.includes(r.period)||!Number.isInteger(r.grade)||r.grade<1||r.grade>12||!r.class||!r.subject||!r.student||[r.class,r.subject,r.student].some(v=>typeof v!=='string'||v.length>100)||!Number.isFinite(r.score)||r.score<0||r.score>10||Math.abs(r.score*100-Math.round(r.score*100))>1e-7||!['',undefined,'Chọn','Không chọn'].includes(r.thiTN)||(r.grade!==12&&r.thiTN))throw Error('Kho chứa dòng điểm không hợp lệ.');}
- const prepared=normalizedRecords(value.records);if(prepared.errors.length)throw Error('Kho có khóa học sinh/lớp/môn/kỳ trùng nhau sau chuẩn hóa.');return {records:prepared.records,settings:{years:value.settings.years,defaultYear:value.settings.defaultYear,threshold:value.settings.threshold}};
+ const prepared=normalizedRecords(value.records);if(prepared.errors.length)throw Error('Kho có khóa học sinh/lớp/môn/kỳ trùng nhau sau chuẩn hóa.');return {records:prepared.records,settings:{years:value.settings.years,defaultYear:value.settings.defaultYear,threshold:value.settings.threshold,...(value.settings.hqgdAssignments!==undefined?{hqgdAssignments:validateHQGDAssignments(value.settings.hqgdAssignments,years)}:{})}};
 }
