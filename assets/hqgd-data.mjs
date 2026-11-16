@@ -1,12 +1,14 @@
 // Adapter only. The original HQGD engine and four-period formula modules remain unchanged.
-import {SUBJECTS,className} from './hqgd-source/engine.mjs';
-import {fourPeriods} from './hqgd-source/four-periods.mjs';
+import {SUBJECTS,className} from './hqgd-source/engine.mjs?v=tn20261116';
+import {fourPeriods} from './hqgd-source/four-periods.mjs?v=tn20261116';
 export const PERIODS=['Giữa HK1','HK1','Giữa HK2','HK2'];
 export const missingTeacher=t=>t.startsWith('[Chưa phân công] ');
-const core=s=>['Toán','Ngữ văn','Văn'].includes(s);
-export function cohort(r){return Number(r.grade)!==12||core(r.subject)?'Chung':r.thiTN==='Chọn'?'Chọn TN':r.thiTN==='Không chọn'?'Không chọn TN':'Chưa khai báo';}
+const core=s=>['Toán','Ngữ văn','Văn','Giáo dục quốc phòng và an ninh'].includes(s);
+export function cohort(r){return Number(r.grade)!==12||core(r.subject)?'Chung':r.thiTN==='Chọn'&&r.year==='2026-2027'&&!r.tnClass?'Chọn TN — chưa ghép lớp':r.thiTN==='Chọn'?'Chọn TN':r.thiTN==='Không chọn'?'Không chọn TN':'Chưa khai báo';}
 export function buildHQGD(records,assignments,year,grade){
  if(!grade)return [];
+ records=globalThis.HTB_TN2027?.hqRows(records)||records;
+ assignments=globalThis.HTB_TN2027?.assignments(assignments)||assignments;
  const rows=records.filter(r=>r.year===year&&String(r.grade)===String(grade));
  const partitions=new Map();
  for(const r of rows){const group=cohort(r);if(!partitions.has(group))partitions.set(group,[]);partitions.get(group).push(r);if(!SUBJECTS.includes(r.subject))SUBJECTS.push(r.subject);}
@@ -15,11 +17,11 @@ export function buildHQGD(records,assignments,year,grade){
   const terms={1:[],2:[]},counts=[];
   for(const row of classes.values()){
    const assignment=assignments.find(a=>a.year===year&&a.subject===row.subject&&className(a.class)===row.class);
-   const means=row.values.map(v=>v.length?v.reduce((s,n)=>s+n,0)/v.length:null);
+   const means=row.values.map(v=>!group.includes('chưa ghép lớp')&&v.length?v.reduce((s,n)=>s+n,0)/v.length:null);
    counts.push({subject:row.subject,class:row.class,counts:row.values.map(v=>v.length)});
    for(const t of [1,2]){
     // Include the union of classes across four periods so missing periods stay blank and block ranks.
-    terms[t].push({subject:row.subject,class:row.class,teacher:assignment?.['teacher'+t]||'[Chưa phân công] '+row.class,mid:means[(t-1)*2],final:means[(t-1)*2+1]});
+    terms[t].push({subject:row.subject,class:row.class,teacher:(group.includes('chưa ghép lớp')?'':assignment?.['teacher'+t])||'[Chưa phân công] '+row.class,mid:means[(t-1)*2],final:means[(t-1)*2+1]});
    }
   }
   const report=fourPeriods(terms[1],terms[2]);

@@ -4,7 +4,7 @@ export const SCHOOL_YEARS={'2026-2027':{'10':19,'11':13,'12':13}};
 export function schoolClasses(year){const counts=SCHOOL_YEARS[year];return counts?Object.entries(counts).flatMap(([grade,count])=>Array.from({length:count},(_,i)=>grade+'A'+String(i+1).padStart(2,'0'))):[];}
 export function validateScope(rows,year){const classes=schoolClasses(year);return classes.length?rows.filter(r=>!classes.includes(className(r.class))).map(r=>`${r.subject} ${r.class}: nằm ngoài danh mục lớp năm học ${year}`):[];}
 export const norm=s=>String(s??'').normalize('NFC').trim().replace(/\s+/g,' ');
-export function className(s){return norm(s).toUpperCase().replace(/^(10|11|12)A0*(\d+)$/,'$1A$2').replace(/A(\d)$/,'A0$1');}
+export function className(s){return norm(s).toUpperCase().replace(/^(10|11|12)A0*(\d+)$/,(_,g,n)=>g+'A'+String(Number(n)).padStart(2,'0'));}
 export function number(s){if(s===null||s===undefined||s==='')return null;let n=Number(String(s).replace(',','.'));return Number.isFinite(n)?n:null;}
 const mean=a=>a.length?a.reduce((s,n)=>s+n,0)/a.length:null;
 // Excel RANK.EQ descending: ties share rank; the next rank has a gap.

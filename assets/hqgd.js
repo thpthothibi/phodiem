@@ -1,9 +1,9 @@
-import {makePDFJobs,createHQGDPDF} from './hqgd-pdf.mjs';
-import {selectPeriod,periodLabel,classTable,baselineTable} from './hqgd-period.mjs';
-import {buildHQGD,missingTeacher} from './hqgd-data.mjs';
-import {readAssignmentWorkbook,parseAssignments} from './hqgd-import.mjs';
-import {className} from './hqgd-source/engine.mjs';
-import {exportResults,exportClassWorkbook,exportTeacherWorkbook} from './hqgd-source/excel.mjs';
+import {makePDFJobs,createHQGDPDF} from './hqgd-pdf.mjs?v=tn20261116';
+import {selectPeriod,periodLabel,classTable,baselineTable} from './hqgd-period.mjs?v=tn20261116';
+import {buildHQGD,missingTeacher} from './hqgd-data.mjs?v=tn20261116';
+import {readAssignmentWorkbook,parseAssignments} from './hqgd-import.mjs?v=tn20261116';
+import {className} from './hqgd-source/engine.mjs?v=tn20261116';
+import {exportResults,exportClassWorkbook,exportTeacherWorkbook} from './hqgd-source/excel.mjs?v=tn20261116';
 const el=id=>document.getElementById(id),E=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const fmt=n=>n===null||n===undefined?'—':Number(n).toLocaleString('vi-VN',{minimumFractionDigits:2,maximumFractionDigits:2});
 const unique=a=>[...new Set(a)].sort((a,b)=>String(a).localeCompare(String(b),'vi',{numeric:true}));
@@ -11,15 +11,16 @@ const options=(id,values,first)=>{const s=el(id),v=s.value;s.innerHTML=(first?'<
 let active=false,tab='classes',partitions=[];
 function sync(){
  const first=!el('hqYear').options.length;options('hqYear',settings.years);if(first)el('hqYear').value=settings.defaultYear;
- const base=records.filter(r=>r.year===el('hqYear').value);options('hqGrade',unique(base.map(r=>String(r.grade))),'Chọn khối');
+ const base=hqRecords().filter(r=>r.year===el('hqYear').value);options('hqGrade',unique(base.map(r=>String(r.grade))),'Chọn khối');
  const data=base.filter(r=>String(r.grade)===el('hqGrade').value);options('hqSubject',unique(data.map(r=>r.subject)),'Tất cả môn');options('hqClass',unique(data.filter(r=>!el('hqSubject').value||r.subject===el('hqSubject').value).map(r=>className(r.class))),'Tất cả lớp');
  el('hqTNField').hidden=el('hqGrade').value!=='12';if(el('hqGrade').value!=='12')el('hqTN').value='';
 }
-const assignmentList=()=>settings.hqgdAssignments||[];
+const assignmentList=()=>window.HTB_TN2027.assignments(settings.hqgdAssignments||[]);
+const hqRecords=()=>window.HTB_TN2027.hqRows(records);
 const teacher=t=>missingTeacher(t)?'Chưa phân công':t;
 const chosen=r=>(!el('hqSubject').value||r.subject===el('hqSubject').value)&&(!el('hqClass').value||className(r.class||'')===el('hqClass').value||r.classes?.includes(el('hqClass').value));
 const subChosen=r=>!el('hqSubject').value||r.subject===el('hqSubject').value;
-const selectedGroups=()=>partitions.filter(x=>(!el('hqTN').value||x.group==='Chung'||x.group===el('hqTN').value)&&x.report.rows.some(chosen));
+const selectedGroups=()=>partitions.filter(x=>(!el('hqTN').value||x.group==='Chung'||(x.group===el('hqTN').value||x.group.startsWith(el('hqTN').value+' —')))&&x.report.rows.some(chosen));
 const teacherChosen=(r,p)=>subChosen(r)&&(!el('hqClass').value||p.report.rows.some(c=>c.subject===r.subject&&c.class===el('hqClass').value&&(c.teacher1===r.teacher||c.teacher2===r.teacher)));
 const currentTerm=p=>selectPeriod(p,el('hqTerm').value,el('hqCombined').checked);
 const selectedLabel=()=>periodLabel(el('hqTerm').value,el('hqCombined').checked);
@@ -32,7 +33,7 @@ function render(){if(!active)return;sync();const mode=el('hqTerm').value;el('hqC
  if(!el('hqGrade').value){partitions=[];el('hqResults').innerHTML='<section class="card hq-empty">Chọn khối để xem báo cáo HQGD.</section>';el('hqHint').textContent='Chưa chọn khối. Không tự tải báo cáo toàn trường.';el('hqStats').innerHTML='';el('hqExport').disabled=el('hqPrint').disabled=true;return;}
  try{partitions=buildHQGD(records,assignmentList(),el('hqYear').value,el('hqGrade').value);}catch(e){el('hqResults').textContent=e.message;el('hqExport').disabled=el('hqPrint').disabled=true;return;}
  const selected=selectedGroups(),rows=selected.flatMap(p=>currentTerm(p)?.rows||[]).filter(chosen),missing=rows.filter(r=>!r.assigned).length;
- el('hqHint').textContent=`Năm ${el('hqYear').value} · Khối ${el('hqGrade').value} · ${selectedLabel()}. Lọc lớp chỉ thay phần hiển thị, không thay BQ khối hoặc hạng.`+(missing?` ${missing} dòng lớp/môn chưa phân công giáo viên.`:'');
+ el('hqHint').textContent=`Năm ${el('hqYear').value} · Khối ${el('hqGrade').value} · ${selectedLabel()}. Lọc lớp chỉ thay phần hiển thị, không thay BQ khối hoặc hạng.`+(missing?` ${missing} dòng lớp/môn chưa phân công giáo viên.`:'')+(el('hqGrade').value==='12'?' Nhóm chọn TN thống kê theo lớp học môn. Học sinh chọn TN chưa ghép được lớp được tách riêng; cần cập nhật Worker TN 2027 hoặc đối chiếu tên và lớp hành chính.':'');
  el('hqStats').innerHTML=[['Lớp × môn × nhóm',rows.length],['Dòng đủ điểm theo cách tính',rows.filter(r=>r.effect!==null).length],['Có phân công',rows.filter(r=>r.assigned).length],['Nhóm báo cáo',selected.length]].map(([k,v])=>`<div class="hq-stat"><small>${E(k)}</small><strong>${v}</strong></div>`).join('');
  el('hqExport').disabled=el('hqPrint').disabled=!selected.length;
  if(tab==='assign'){renderAssignments();return;}if(tab==='export'){renderExport();return;}
@@ -64,9 +65,9 @@ function renderExport(){
  el('hqPDFPreview').onclick=()=>run(true);el('hqPDFDownload').onclick=()=>run(false);
 }
 function renderAssignments(){
- const pairs=new Map();for(const p of partitions)for(const r of p.report.rows)if(chosen(r))pairs.set(JSON.stringify([r.subject,r.class]),r);
+ const pairs=new Map();for(const a of assignmentList().filter(a=>a.year===el('hqYear').value&&a.class.startsWith(el('hqGrade').value)&&chosen(a)))pairs.set(JSON.stringify([a.subject,a.class]),{subject:a.subject,class:a.class});for(const p of partitions)for(const r of p.report.rows)if(chosen(r))pairs.set(JSON.stringify([r.subject,r.class]),r);
  const list=[...pairs.values()].sort((a,b)=>a.subject.localeCompare(b.subject,'vi')||a.class.localeCompare(b.class,'vi',{numeric:true}));
- el('hqResults').innerHTML='<section class="card tablecard"><div class="cardtitle"><div><h2>Phân công giáo viên theo học kỳ</h2><p>Điền tên thống nhất để ghép cả năm. Mỗi lớp/môn có GV HK1 và GV HK2; dùng chung cho hai nhóm TN. Lưu bằng mã ghi, phân công đồng bộ cùng điểm trên Cloudflare sau khi cập nhật Worker.</p></div></div><div class="hq-actions"><button class="btn primary" id="hqSaveAssignments">Lưu phân công</button><button class="btn" id="hqAssignmentTemplate">Tải bảng phân công Excel</button><label class="btn">Nhập phân công Excel<input id="hqAssignmentImport" type="file" accept=".xlsx,.xls" hidden></label></div><div class="tablewrap"><table><thead><tr><th>Môn</th><th>Lớp</th><th>Giáo viên HK1</th><th>Giáo viên HK2</th></tr></thead><tbody>'+list.map((r,i)=>{const a=assignmentList().find(a=>a.year===el('hqYear').value&&a.subject===r.subject&&className(a.class)===r.class)||{};return `<tr><td>${E(r.subject)}</td><td>${E(r.class)}</td><td><input aria-label="GV HK1 ${E(r.subject+' '+r.class)}" data-assign="${i}" data-term="1" maxlength="100" value="${E(a.teacher1||'')}"></td><td><input aria-label="GV HK2 ${E(r.subject+' '+r.class)}" data-assign="${i}" data-term="2" maxlength="100" value="${E(a.teacher2||'')}"></td></tr>`;}).join('')+'</tbody></table></div><p id="hqAssignStatus" role="status"></p></section>';
+ el('hqResults').innerHTML='<section class="card tablecard"><div class="cardtitle"><div><h2>Phân công giáo viên theo học kỳ</h2><p>Điền tên thống nhất để ghép cả năm. Nhóm chọn TN dùng lớp học môn (12TA1, 12VL1, 12TH1…), nhóm không chọn dùng lớp hành chính. Phân công gợi ý HK1 lấy từ TKB ngày 17/08/2026; HK2 để trống. Tên giáo viên giữ cách viết trong TKB. Các chỉnh sửa đã lưu được ưu tiên hơn gợi ý. Lưu bằng mã ghi, phân công đồng bộ cùng điểm trên Cloudflare sau khi cập nhật Worker.</p></div></div><div class="hq-actions"><button class="btn primary" id="hqSaveAssignments">Lưu phân công</button><button class="btn" id="hqAssignmentTemplate">Tải bảng phân công Excel</button><label class="btn">Nhập phân công Excel<input id="hqAssignmentImport" type="file" accept=".xlsx,.xls" hidden></label></div><div class="tablewrap"><table><thead><tr><th>Môn</th><th>Lớp</th><th>Giáo viên HK1</th><th>Giáo viên HK2</th></tr></thead><tbody>'+list.map((r,i)=>{const a=assignmentList().find(a=>a.year===el('hqYear').value&&a.subject===r.subject&&className(a.class)===r.class)||{};return `<tr><td>${E(r.subject)}</td><td>${E(r.class)}</td><td><input aria-label="GV HK1 ${E(r.subject+' '+r.class)}" data-assign="${i}" data-term="1" maxlength="100" value="${E(a.teacher1||'')}"></td><td><input aria-label="GV HK2 ${E(r.subject+' '+r.class)}" data-assign="${i}" data-term="2" maxlength="100" value="${E(a.teacher2||'')}"></td></tr>`;}).join('')+'</tbody></table></div><p id="hqAssignStatus" role="status"></p></section>';
  el('hqSaveAssignments').onclick=()=>{const incoming=list.map((r,i)=>({year:el('hqYear').value,subject:r.subject,class:r.class,teacher1:document.querySelector(`[data-assign="${i}"][data-term="1"]`).value.trim(),teacher2:document.querySelector(`[data-assign="${i}"][data-term="2"]`).value.trim()}));try{storeAssignments(incoming);}catch(error){assignmentNotice(error.message,true);}};
  el('hqAssignmentTemplate').onclick=()=>{const wb=XLSX.utils.book_new();XLSX.utils.book_append_sheet(wb,XLSX.utils.json_to_sheet(list.map(r=>{const a=assignmentList().find(a=>a.year===el('hqYear').value&&a.subject===r.subject&&className(a.class)===r.class)||{};return {'Năm học':el('hqYear').value,'Môn':r.subject,'Lớp':r.class,'Giáo viên HK1':a.teacher1||'','Giáo viên HK2':a.teacher2||''};})),'Phan_cong');XLSX.writeFile(wb,'Phan_cong_HQGD_'+el('hqYear').value+'.xlsx');};
  el('hqAssignmentImport').onchange=async e=>{try{const f=e.target.files[0];if(!f)return;if(f.size>5*1024*1024)throw Error('Chọn Excel tối đa 5 MB.');el('hqAssignStatus').textContent='Đang đọc phân công…';const wb=await readAssignmentWorkbook(await f.arrayBuffer(),XLSX),parsed=parseAssignments(wb,XLSX,{year:el('hqYear').value,canonicalSubject,className,key:plainKey});reviewAssignments(parsed,f.name);}catch(error){el('hqAssignStatus').textContent=error.message;}finally{e.target.value='';}};

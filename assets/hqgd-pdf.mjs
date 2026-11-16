@@ -1,5 +1,5 @@
-import {buildHQGD,missingTeacher} from './hqgd-data.mjs';
-import {selectPeriod,periodLabel} from './hqgd-period.mjs';
+import {buildHQGD,missingTeacher} from './hqgd-data.mjs?v=tn20261116';
+import {selectPeriod,periodLabel} from './hqgd-period.mjs?v=tn20261116';
 const cmp=(a,b)=>String(a).localeCompare(String(b),'vi',{numeric:true});
 const format=v=>v===null||v===undefined?'':Number(Math.abs(v)<0.005?0:v).toLocaleString('vi-VN',{minimumFractionDigits:2,maximumFractionDigits:2});
 const displayTeacher=t=>!t||missingTeacher(t)?'Chưa phân công':t;
@@ -7,7 +7,7 @@ const rank=(v,all)=>v===null?null:1+all.filter(x=>x!==null&&x>v+1e-10).length;
 export function makePDFJobs(records,assignments,{year,grades,subjects,period,combined,klass='',tn=''}){
  const jobs=[];for(const subject of [...new Set(subjects)].sort(cmp)){
   const sections=[];for(const grade of grades){for(const p of buildHQGD(records,assignments,year,grade)){
-   if(tn&&p.group!=='Chung'&&p.group!==tn)continue;
+   if(tn&&p.group!=='Chung'&&p.group!==tn&&!p.group.startsWith(tn+' —'))continue;
    const model=selectPeriod(p,period,combined),full=model.rows.filter(r=>r.subject===subject),rows=full.filter(r=>!klass||r.class===klass);
    if(rows.length)sections.push({grade:String(grade),group:p.group,model,rows,counts:p.counts.filter(r=>r.subject===subject),baseline:model.baselines.find(r=>r.subject===subject),teachers:model.teachers.filter(r=>r.subject===subject)});
   }}if(sections.length)jobs.push({subject,sections,year,period,combined,label:periodLabel(period,combined),klass});

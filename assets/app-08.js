@@ -42,7 +42,7 @@ async function exportPDF(options=null){
  if(pdfBusy)throw Error('Đang tạo PDF khác, hãy thử lại.');if(!dataSource.length)return;
  if(!window.jspdf)return toast('Chưa tải được bộ tạo PDF. Hãy tải lại trang.');
  pdfBusy=true;$('exportPdf').disabled=true;$('exportPdf').textContent='Đang tạo PDF…';
- const allData=dataSource.map(r=>({...r})),jobs=buildExportJobs(allData),kind=chartType,metric=$('metric').value,threshold=settings.threshold,isDemo=custom?false:demo,title=custom?options.title:$('customTitle').value.trim()||'PHỔ ĐIỂM & BÁO CÁO TỔNG',width=Number($('binWidth').value),scopeParts=custom?options.scopeParts:[$('year').value,picked('period').join(', ')||'Tất cả kỳ',picked('class').length?'Lớp '+picked('class').join(', '):'Tất cả lớp'];
+ const allData=dataSource.map(r=>({...window.HTB_TN2027.resolve(r)})),jobs=buildExportJobs(allData),kind=chartType,metric=$('metric').value,threshold=settings.threshold,isDemo=custom?false:demo,title=custom?options.title:$('customTitle').value.trim()||'PHỔ ĐIỂM & BÁO CÁO TỔNG',width=Number($('binWidth').value),scopeParts=custom?options.scopeParts:[$('year').value,picked('period').join(', ')||'Tất cả kỳ',picked('class').length?'Lớp '+picked('class').join(', '):'Tất cả lớp'];
  try{
   if(!pdfFont&&window.HTB_PDF_FONT)pdfFont=window.HTB_PDF_FONT;
   if(!pdfFont){const res=await fetch('vendor/DejaVuSans.ttf');if(!res.ok)throw Error('Không tải được phông chữ tiếng Việt.');const bytes=new Uint8Array(await res.arrayBuffer());let str='';for(let i=0;i<bytes.length;i+=8192)str+=String.fromCharCode(...bytes.subarray(i,i+8192));pdfFont=btoa(str);}
@@ -76,7 +76,7 @@ async function exportPDF(options=null){
      await plot(panel.data,x,y+4,w,57);
      const stat=panel.data.length?statRows(detailedStats(panel.data),threshold):[['Số lượt điểm','0'],['Số học sinh có điểm','0'],['Điểm trung bình','—'],['Trạng thái','Chưa có dữ liệu']];
      const tableY=y+65,statsWidth=80,histX=x+83,histWidth=49;
-     doc.autoTable({...tableBase,startY:tableY,tableWidth:statsWidth,margin:{left:x,right:297-x-statsWidth,bottom:15},head:[['Thống kê nhóm','Số liệu']],body:[['Số lớp',String(unique(panel.data.map(r=>r.class)).length)],...stat],styles:{...tableBase.styles,fontSize:6.5,cellPadding:0.9},columnStyles:{0:{cellWidth:49},1:{cellWidth:31}}});
+     doc.autoTable({...tableBase,startY:tableY,tableWidth:statsWidth,margin:{left:x,right:297-x-statsWidth,bottom:15},head:[['Thống kê nhóm','Số liệu']],body:[['Số lớp',String(unique(panel.data.map(r=>r.tnClass||r.class)).length)],...stat],styles:{...tableBase.styles,fontSize:6.5,cellPadding:0.9},columnStyles:{0:{cellWidth:49},1:{cellWidth:31}}});
      const hist=scoreHistogram(panel.data,width),binRows=[];
      // At the finest bin size use two pairs to keep all bins on one page.
      const pairs=hist.labels.length>25?2:1;
