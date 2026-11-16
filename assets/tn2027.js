@@ -8,13 +8,28 @@
  function resolve(r){return subject(r.subject)===r.subject?r:{...r,subject:subject(r.subject)};}
  const reportChosen=r=>r.thiTN==='Chọn'||r.tnReportChoice==='Chọn';
  function hqRows(rows){return rows.filter(r=>!r.tnExcluded).map(resolve).map(r=>Number(r.grade)===12&&reportChosen(r)&&!['Toán','Ngữ văn','Giáo dục quốc phòng và an ninh'].includes(r.subject)&&r.tnClass?{...r,adminClass:r.class,class:r.tnClass,thiTN:'Chọn'}:r);}
+ const rosterVersion='2026-2027-v8-cn-complete';
+ const upgradeMessage='Worker hiện tại chưa hỗ trợ ghép lớp TN. Trong Cloudflare, mở Worker htb-pho-diem-api → Edit code, thay toàn bộ bằng cloudflare-worker.mjs của gói V8.4 rồi Deploy. Giữ nguyên DB và các mã truy cập; sau đó tải lại trang và lấy bản cloud mới.';
  async function prepareReport(rows,request){
-  const needed=rows.filter(r=>Number(r.grade)===12&&r.year===data.year&&r.tnResolvedVersion!=='2026-2027-v8-cn-complete');
+  const needed=rows.filter(r=>Number(r.grade)===12&&r.year===data.year&&r.tnResolvedVersion!==rosterVersion);
   if(!needed.length)return rows;
-  if(needed.some(r=>String(r.student).startsWith('VIEW-')))throw Error('Dữ liệu ghép lớp đang là bản cũ. Cập nhật Worker V8 rồi lấy lại dữ liệu cloud mới.');
-  const result=await request('/tn/resolve','POST',{records:needed});
-  if(result.tnRosterVersion!=='2026-2027-v8-cn-complete'||!Array.isArray(result.records)||result.records.length!==needed.length)throw Error('Worker chưa hỗ trợ ghép lớp V8. Cập nhật Worker và tải lại trang.');
   const keys=['year','period','grade','class','subject','student','score','thiTN'];
+  const fresh=value=>value?.tnRosterVersion===rosterVersion&&Array.isArray(value.records)&&value.records.filter(r=>Number(r.grade)===12&&r.year===data.year).every(r=>r.tnResolvedVersion===rosterVersion);
+  const readSnapshot=async()=>{const snapshot=await request('/dataset');if(!fresh(snapshot))throw Error(upgradeMessage);return snapshot;};
+  if(needed.every(r=>String(r.student).startsWith('VIEW-'))){
+   const snapshot=await readSnapshot();return snapshot.records;
+  }
+  let result;
+  try{result=await request('/tn/resolve','POST',{records:needed});}
+  catch(error){
+   if(![404,405,501].includes(error.status))throw error;
+   let snapshot;try{snapshot=await readSnapshot();}catch(readError){if(readError.message===upgradeMessage)throw readError;throw Error(upgradeMessage);}
+   if(needed.some(r=>!String(r.student).startsWith('VIEW-'))&&snapshot.records.some(r=>String(r.student).startsWith('VIEW-')))throw Error('Đang dùng chế độ xem công khai. Nhập mã quản lý dữ liệu tại Kho dữ liệu Cloudflare để ghép các điểm đang có trên máy, rồi xuất lại.');
+   const key=r=>JSON.stringify(keys.map(k=>r[k]??'')),mapped=new Map(snapshot.records.map(r=>[key(r),r]));
+   if(needed.some(r=>!mapped.has(key(r))))throw Error(upgradeMessage+' Một số điểm trên máy chưa có trong bản cloud; đã giữ nguyên điểm trên máy.');
+   const pending=new Set(needed);return rows.map(r=>pending.has(r)?{...r,...mapped.get(key(r))}:r);
+  }
+  if(!fresh(result)||result.records.length!==needed.length)throw Error(upgradeMessage);
   for(let i=0;i<needed.length;i++)if(keys.some(k=>needed[i][k]!==result.records[i][k]))throw Error('Kết quả ghép lớp không khớp điểm gốc.');
   const mapped=new Map(needed.map((r,i)=>[r,result.records[i]]));return rows.map(r=>mapped.get(r)||r);
  }
