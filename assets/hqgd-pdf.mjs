@@ -1,13 +1,20 @@
-import {buildHQGD,missingTeacher} from './hqgd-data.mjs?v=tn-specialty-column-v5';
-import {selectPeriod,periodLabel} from './hqgd-period.mjs?v=tn-specialty-column-v5';
+import {buildHQGD,missingTeacher,cohort} from './hqgd-data.mjs?v=tn-legacy-pdf-v7';
+import {selectPeriod,periodLabel,requiredPeriods} from './hqgd-period.mjs?v=tn-legacy-pdf-v7';
 const cmp=(a,b)=>String(a).localeCompare(String(b),'vi',{numeric:true});
 const format=v=>v===null||v===undefined?'':Number(Math.abs(v)<0.005?0:v).toLocaleString('vi-VN',{minimumFractionDigits:2,maximumFractionDigits:2});
 const displayTeacher=t=>!t||missingTeacher(t)?'Chưa phân công':t;
 const displayClass=(klass,group)=>group==='Chọn TN'?(globalThis.HTB_TN2027?.data.assignments.find(a=>a.class===klass&&a.sourceClass)?.sourceClass||klass):klass;
 const rank=(v,all)=>v===null?null:1+all.filter(x=>x!==null&&x>v+1e-10).length;
 export function makePDFJobs(records,assignments,{year,grades,subjects,period,combined,klass='',tn=''}){
+ records=records.map(r=>globalThis.HTB_TN2027?.resolve(r)||r);const missingScopes=[];const requirements=requiredPeriods(period,combined);
  const jobs=[];for(const subject of [...new Set(subjects)].sort(cmp)){
-  const sections=[],warnings=[];for(const grade of grades){for(const p of buildHQGD(records,assignments,year,grade)){
+  const sections=[],warnings=[];for(const grade of grades){
+   const scope=records.filter(r=>r.year===year&&String(r.grade)===String(grade)&&r.subject===subject&&(!klass||r.class===klass||r.tnClass===klass)&&(!tn||cohort(r)==='Chung'||cohort(r)===tn));
+   if(!scope.length)continue;
+   const available=new Set(scope.map(r=>r.period)),missing=requirements.filter(p=>!available.has(p));
+   if(missing.length){missingScopes.push(subject+' khối '+grade+': thiếu '+missing.join(', ')+' (hiện có '+[...available].join(', ')+')');continue;}
+   const selectedTNClasses=new Set(scope.filter(r=>r.thiTN==='Chọn').map(r=>r.tnClass).filter(Boolean));
+   for(const p of buildHQGD(records,assignments,year,grade,{useTNClasses:true})){
    if(tn&&p.group!=='Chung'&&p.group!==tn&&!p.group.startsWith(tn+' —'))continue;
    if(p.group.includes('chưa ghép lớp')){
     const counts=p.counts.filter(r=>r.subject===subject&&(!klass||r.class===klass));
@@ -15,10 +22,10 @@ export function makePDFJobs(records,assignments,{year,grades,subjects,period,com
     const count=counts.reduce((n,r)=>n+indices.reduce((v,i)=>v+r.counts[i],0),0);
     if(count)warnings.push({grade:String(grade),count});continue;
    }
-   const model=selectPeriod(p,period,combined),full=model.rows.filter(r=>r.subject===subject),rows=full.filter(r=>!klass||r.class===klass);
+   const model=selectPeriod(p,period,combined),full=model.rows.filter(r=>r.subject===subject),rows=full.filter(r=>!klass||r.class===klass||(p.group==='Chọn TN'&&selectedTNClasses.has(r.class)));
    if(rows.length)sections.push({grade:String(grade),group:p.group,model,rows,counts:p.counts.filter(r=>r.subject===subject),baseline:model.baselines.find(r=>r.subject===subject),teachers:model.teachers.filter(r=>r.subject===subject)});
   }}if(sections.length||warnings.length)jobs.push({subject,sections,warnings,year,period,combined,label:periodLabel(period,combined),klass});
- }return jobs;
+ }if(missingScopes.length)throw Error('Chưa có đủ điểm cho '+periodLabel(period,combined)+'. '+missingScopes.slice(0,4).join('; ')+'. Hãy chọn kỳ đang có dữ liệu.');return jobs;
 }
 function studentCount(section,row,period,combined){const entry=section.counts.find(x=>x.class===row.class),c=entry?.counts||[0,0,0,0];const i=period.endsWith('2')?2:0;const actual=period==='annual'?c.join('/'):period.startsWith('gk')?String(c[i]):combined?(c[i]===c[i+1]?String(c[i]):c[i]+'/'+c[i+1]):String(c[i+1]);return section.group==='Chọn TN'&&entry?.rosterCount!=null?entry.rosterCount+' / '+actual:actual;}
 function classTable(section,job){

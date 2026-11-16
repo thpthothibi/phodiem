@@ -41,3 +41,12 @@ export function baselineTable(model){
  if(model.kind==='combined')return {headers:['Môn','Khối','Số lớp','BQ giữa kỳ','BQ cuối kỳ','Trạng thái'],rows:model.baselines.map(r=>[r.subject,r.grade,r.classes,r.mid,r.final,r.complete?'Đủ điểm':'Chưa đủ điểm'])};
  return {headers:['Môn','Khối','Số lớp','BQ kỳ đã chọn','Trạng thái'],rows:model.baselines.map(r=>[r.subject,r.grade,r.classes,r.score,r.complete?'Đủ điểm':'Chưa đủ điểm'])};
 }
+
+export function requiredPeriods(id,combined=false){
+ if(!PERIOD_OPTIONS.some(x=>x[0]===id))throw Error('Kỳ HQGD không hợp lệ.');
+ if(id==='annual')return ['Giữa HK1','HK1','Giữa HK2','HK2'];
+ const second=id.endsWith('2'),mid=second?'Giữa HK2':'Giữa HK1',final=second?'HK2':'HK1';
+ return id.startsWith('gk')?[mid]:combined?[mid,final]:[final];
+}
+export function availablePeriodIds(records){const present=new Set(records.filter(r=>Number.isFinite(r.score)).map(r=>r.period));return PERIOD_OPTIONS.filter(([id])=>requiredPeriods(id,false).every(p=>present.has(p))).map(([id])=>id);}
+export function preferredAvailablePeriod(records,current){const options=availablePeriodIds(records);return options.includes(current)?current:options[0]||'';}

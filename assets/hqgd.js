@@ -1,23 +1,27 @@
-import './tn2027.js?v=tn-specialty-column-v5';
-import {makePDFJobs,createHQGDPDF} from './hqgd-pdf.mjs?v=tn-specialty-column-v5';
-import {selectPeriod,periodLabel,classTable,baselineTable} from './hqgd-period.mjs?v=tn-specialty-column-v5';
-import {buildHQGD,missingTeacher} from './hqgd-data.mjs?v=tn-specialty-column-v5';
-import {readAssignmentWorkbook,parseAssignments} from './hqgd-import.mjs?v=tn-specialty-column-v5';
-import {className} from './hqgd-source/engine.mjs?v=tn-specialty-column-v5';
-import {exportResults,exportClassWorkbook,exportTeacherWorkbook} from './hqgd-source/excel.mjs?v=tn-specialty-column-v5';
+import './tn2027.js?v=tn-legacy-pdf-v7';
+import {makePDFJobs,createHQGDPDF} from './hqgd-pdf.mjs?v=tn-legacy-pdf-v7';
+import {selectPeriod,periodLabel,classTable,baselineTable,availablePeriodIds,preferredAvailablePeriod} from './hqgd-period.mjs?v=tn-legacy-pdf-v7';
+import {buildHQGD,missingTeacher} from './hqgd-data.mjs?v=tn-legacy-pdf-v7';
+import {readAssignmentWorkbook,parseAssignments} from './hqgd-import.mjs?v=tn-legacy-pdf-v7';
+import {className} from './hqgd-source/engine.mjs?v=tn-legacy-pdf-v7';
+import {exportResults,exportClassWorkbook,exportTeacherWorkbook} from './hqgd-source/excel.mjs?v=tn-legacy-pdf-v7';
 const el=id=>document.getElementById(id),E=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const fmt=n=>n===null||n===undefined?'—':Number(n).toLocaleString('vi-VN',{minimumFractionDigits:2,maximumFractionDigits:2});
 const unique=a=>[...new Set(a)].sort((a,b)=>String(a).localeCompare(String(b),'vi',{numeric:true}));
 const options=(id,values,first)=>{const s=el(id),v=s.value;s.innerHTML=(first?'<option value="">'+E(first)+'</option>':'')+values.map(x=>`<option value="${E(x)}">${E(x)}</option>`).join('');if([...s.options].some(x=>x.value===v))s.value=v;};
-let active=false,tab='classes',partitions=[];
+let active=false,tab='classes',partitions=[],periodNotice='';
 function sync(){
  const first=!el('hqYear').options.length;options('hqYear',settings.years);if(first)el('hqYear').value=settings.defaultYear;
  const base=hqRecords().filter(r=>r.year===el('hqYear').value);options('hqGrade',unique(base.map(r=>String(r.grade))),'Chọn khối');
  const data=base.filter(r=>String(r.grade)===el('hqGrade').value);options('hqSubject',unique(data.map(r=>r.subject)),'Tất cả môn');options('hqClass',unique(data.filter(r=>!el('hqSubject').value||r.subject===el('hqSubject').value).map(r=>className(r.class))),'Tất cả lớp');
+ const periodRows=(el('hqGrade').value?data:base).filter(r=>(!el('hqSubject').value||r.subject===el('hqSubject').value)&&(!el('hqClass').value||className(r.class)===el('hqClass').value));
+ const available=availablePeriodIds(periodRows),oldPeriod=el('hqTerm').value,nextPeriod=preferredAvailablePeriod(periodRows,oldPeriod);
+ for(const option of el('hqTerm').options){option.disabled=!available.includes(option.value);option.textContent=periodLabel(option.value,false).replace(' · Riêng học kỳ','')+(option.disabled?' (chưa có điểm)':'');}
+ periodNotice=nextPeriod&&nextPeriod!==oldPeriod?' Đang hiển thị '+periodLabel(nextPeriod,false)+' vì kỳ trước chưa có điểm.':'';if(nextPeriod)el('hqTerm').value=nextPeriod;
  el('hqTNField').hidden=el('hqGrade').value!=='12';if(el('hqGrade').value!=='12')el('hqTN').value='';
 }
 const assignmentList=()=>window.HTB_TN2027.assignments(settings.hqgdAssignments||[]);
-const hqRecords=()=>window.HTB_TN2027.hqRows(records);
+const hqRecords=()=>records.map(r=>window.HTB_TN2027.resolve(r));
 const teacher=t=>missingTeacher(t)?'Chưa phân công':t;
 const chosen=r=>(!el('hqSubject').value||r.subject===el('hqSubject').value)&&(!el('hqClass').value||className(r.class||'')===el('hqClass').value||r.classes?.includes(el('hqClass').value));
 const subChosen=r=>!el('hqSubject').value||r.subject===el('hqSubject').value;
@@ -34,7 +38,7 @@ function render(){if(!active)return;sync();const mode=el('hqTerm').value;el('hqC
  if(!el('hqGrade').value){partitions=[];el('hqResults').innerHTML='<section class="card hq-empty">Chọn khối để xem báo cáo HQGD.</section>';el('hqHint').textContent='Chưa chọn khối. Không tự tải báo cáo toàn trường.';el('hqStats').innerHTML='';el('hqExport').disabled=el('hqPrint').disabled=true;return;}
  try{partitions=buildHQGD(records,assignmentList(),el('hqYear').value,el('hqGrade').value);}catch(e){el('hqResults').textContent=e.message;el('hqExport').disabled=el('hqPrint').disabled=true;return;}
  const selected=selectedGroups(),rows=selected.flatMap(p=>currentTerm(p)?.rows||[]).filter(chosen),missing=rows.filter(r=>!r.assigned).length;
- el('hqHint').textContent=`Năm ${el('hqYear').value} · Khối ${el('hqGrade').value} · ${selectedLabel()}. Lọc lớp chỉ thay phần hiển thị, không thay BQ khối hoặc hạng.`+(missing?` ${missing} dòng lớp/môn chưa phân công giáo viên.`:'')+(el('hqGrade').value==='12'?' Nhóm chọn TN thống kê theo lớp học môn. Học sinh chọn TN chưa ghép được lớp được tách riêng; cần cập nhật Worker TN 2027 hoặc đối chiếu tên và lớp hành chính.':'')+(['10','12'].includes(el('hqGrade').value)?' Công nghệ: BQ tham chiếu theo từng giáo viên trong khối, cùng nhóm; không xếp hạng giữa các GV.':'');
+ el('hqHint').textContent=`Năm ${el('hqYear').value} · Khối ${el('hqGrade').value} · ${selectedLabel()}. Lọc lớp chỉ thay phần hiển thị, không thay BQ khối hoặc hạng.`+periodNotice+(missing?` ${missing} dòng lớp/môn chưa phân công giáo viên.`:'')+(el('hqGrade').value==='12'?' Bảng trên màn hình vẫn theo lớp hành chính; PDF nhóm Chọn TN dùng lớp học môn. Học sinh chọn TN chưa ghép được lớp được tách riêng; cần cập nhật Worker TN 2027 hoặc đối chiếu tên và lớp hành chính.':'')+(['10','12'].includes(el('hqGrade').value)?' Công nghệ: BQ tham chiếu theo từng giáo viên trong khối, cùng nhóm; không xếp hạng giữa các GV.':'');
  el('hqStats').innerHTML=[['Lớp × môn × nhóm',rows.length],['Dòng đủ điểm theo cách tính',rows.filter(r=>r.effect!==null).length],['Có phân công',rows.filter(r=>r.assigned).length],['Nhóm báo cáo',selected.length]].map(([k,v])=>`<div class="hq-stat"><small>${E(k)}</small><strong>${v}</strong></div>`).join('');
  el('hqExport').disabled=el('hqPrint').disabled=!selected.length;
  if(tab==='assign'){renderAssignments();return;}if(tab==='export'){renderExport();return;}

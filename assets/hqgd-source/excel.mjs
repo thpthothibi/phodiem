@@ -1,4 +1,4 @@
-import {SUBJECTS,norm,className,number,schoolClasses} from './engine.mjs?v=tn-specialty-column-v5';
+import {SUBJECTS,norm,className,number,schoolClasses} from './engine.mjs?v=tn-legacy-pdf-v7';
 const key=s=>norm(s).normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/đ/g,'d').replace(/Đ/g,'D').toLowerCase().replace(/[^a-z0-9]/g,'');
 const aliases={toan:'Toán',ly:'Lý',vatly:'Lý',vatli:'Lý',van:'Văn',nguvan:'Văn',su:'Sử',lichsu:'Sử',hoa:'Hóa',hoahoc:'Hóa',dia:'Địa',dialy:'Địa',diali:'Địa',tienganh:'Tiếng anh',anh:'Tiếng anh',sinh:'Sinh',sinhhoc:'Sinh',ktpl:'KTPL',gdktpl:'KTPL',giaoduckinhtevaphapluat:'KTPL',tinhoc:'Tin học',tin:'Tin học',congnghe:'Công nghệ',theduc:'Thể dục',gdtc:'Thể dục',gdqp:'GDQP',gdqpan:'GDQP'};
 const subject=s=>aliases[key(s)]||SUBJECTS.find(x=>key(x)===key(s))||'';

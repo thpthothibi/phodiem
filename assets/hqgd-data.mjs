@@ -1,17 +1,17 @@
 // Adapter only. The original HQGD engine and four-period formula modules remain unchanged.
-import {SUBJECTS,className} from './hqgd-source/engine.mjs?v=tn-specialty-column-v5';
-import {fourPeriods} from './hqgd-source/four-periods.mjs?v=tn-specialty-column-v5';
+import {SUBJECTS,className} from './hqgd-source/engine.mjs?v=tn-legacy-pdf-v7';
+import {fourPeriods} from './hqgd-source/four-periods.mjs?v=tn-legacy-pdf-v7';
 export const PERIODS=['Giữa HK1','HK1','Giữa HK2','HK2'];
 export const missingTeacher=t=>t.startsWith('[Chưa phân công] ');
 const core=s=>['Toán','Ngữ văn','Văn','Giáo dục quốc phòng và an ninh'].includes(s);
-export function cohort(r){return Number(r.grade)!==12||core(r.subject)?'Chung':r.thiTN==='Chọn'&&r.year==='2026-2027'&&!r.tnClass?'Chọn TN — chưa ghép lớp':r.thiTN==='Chọn'?'Chọn TN':r.thiTN==='Không chọn'?'Không chọn TN':'Chưa khai báo';}
-export function buildHQGD(records,assignments,year,grade){
+export function cohort(r,useTNClasses=false){return Number(r.grade)!==12||core(r.subject)?'Chung':useTNClasses&&r.thiTN==='Chọn'&&r.year==='2026-2027'&&!r.tnClass?'Chọn TN — chưa ghép lớp':r.thiTN==='Chọn'?'Chọn TN':r.thiTN==='Không chọn'?'Không chọn TN':'Chưa khai báo';}
+export function buildHQGD(records,assignments,year,grade,{useTNClasses=false}={}){
  if(!grade)return [];
- records=globalThis.HTB_TN2027?.hqRows(records)||records;
+ records=useTNClasses?(globalThis.HTB_TN2027?.hqRows(records)||records):records.map(r=>globalThis.HTB_TN2027?.resolve(r)||r);
  assignments=globalThis.HTB_TN2027?.assignments(assignments)||assignments;
  const rows=records.filter(r=>r.year===year&&String(r.grade)===String(grade));
  const partitions=new Map();
- for(const r of rows){const group=cohort(r);if(!partitions.has(group))partitions.set(group,[]);partitions.get(group).push(r);if(!SUBJECTS.includes(r.subject))SUBJECTS.push(r.subject);}
+ for(const r of rows){const group=cohort(r,useTNClasses);if(!partitions.has(group))partitions.set(group,[]);partitions.get(group).push(r);if(!SUBJECTS.includes(r.subject))SUBJECTS.push(r.subject);}
  return [...partitions].map(([group,marks])=>{
   const classes=new Map();for(const r of marks){const k=JSON.stringify([r.subject,className(r.class)]);if(!classes.has(k))classes.set(k,{subject:r.subject,class:className(r.class),values:[[],[],[],[]]});const i=PERIODS.indexOf(r.period);if(i>=0&&Number.isFinite(r.score))classes.get(k).values[i].push(r.score);}
   const terms={1:[],2:[]},counts=[];
