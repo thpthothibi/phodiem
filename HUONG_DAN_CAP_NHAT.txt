@@ -1,0 +1,13 @@
+BẢN SỬA PDF PHÂN NHÓM THI TN — 16/11/2026
+
+Nguyên nhân: nhánh xuất PDF tách TN trước đây không tạo bảng tần số theo khoảng điểm và không có dòng Số lớp cho từng nhóm.
+
+Cập nhật GitHub repository thpthothibi/phodiem:
+1. Giải nén gói này.
+2. Thay index.html ở thư mục gốc và assets/app-08.js trong thư mục assets bằng hai tệp trong gói. Giữ đúng đường dẫn.
+3. Commit thay đổi và chờ GitHub Pages triển khai xong.
+4. Mở lại trang bằng Ctrl+F5, chọn khối 12 và xuất PDF một môn có hai nhóm TN.
+
+Kết quả: mỗi nhóm có biểu đồ hiện tại, số lớp, các chỉ số thống kê và bảng tần số từng khoảng điểm; mỗi môn một trang A4 ngang. Bản cập nhật index.html đổi phiên bản script để tránh dùng mã cũ trong bộ nhớ đệm.
+
+Kiểm tra: cú pháp JavaScript đạt; 12 PDF dữ liệu giả lập bao gồm hai nhóm, nhóm trống và môn chung ở các khoảng 0,25 / 0,5 / 1 đều xuất đúng một trang. Đã xem bố cục bảng sau khi render PDF. Môi trường kiểm tra dùng ảnh giữ chỗ cho biểu đồ, nên chưa xác nhận việc vẽ Chart.js bằng trình duyệt hay dữ liệu thật của trường. Phần vẽ biểu đồ không thay đổi. Chưa cập nhật website trực tuyến.

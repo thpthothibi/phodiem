@@ -69,7 +69,20 @@ async function exportPDF(options=null){
    if(job.split){
     const full=detailedStats(job.data),meta='Tổng toàn môn: '+number(full.n)+' lượt điểm · ĐTB '+number(full.avg)+' · Chọn TN: '+number(job.panels[0].data.length)+' · Không chọn TN: '+number(job.panels[1].data.length)+' · Chưa khai báo: '+number(job.unmarked.length);
     doc.text(doc.splitTextToSize(meta,269),14,y);y+=7;
-    for(let j=0;j<2;j++){const panel=job.panels[j],x=14+j*137,w=132;doc.setFontSize(11);doc.setTextColor(25,70,140);doc.text(panel.label,x,y);await plot(panel.data,x,y+4,w,57);const stat=panel.data.length?statRows(detailedStats(panel.data),threshold):[['Số lượt điểm','0'],['Điểm trung bình','—'],['Trạng thái','Chưa có dữ liệu']];doc.autoTable({...tableBase,startY:y+65,tableWidth:w,margin:{left:x,right:297-x-w,bottom:20},head:[['Thống kê nhóm','Số liệu']],body:stat,styles:{...tableBase.styles,fontSize:7.5,cellPadding:1.2},columnStyles:{0:{cellWidth:78},1:{cellWidth:54}}});}
+    // Each TN group keeps both summary statistics and the score-bin counts.
+    for(let j=0;j<2;j++){
+     const panel=job.panels[j],x=14+j*137,w=132;
+     doc.setFontSize(11);doc.setTextColor(25,70,140);doc.text(panel.label,x,y);
+     await plot(panel.data,x,y+4,w,57);
+     const stat=panel.data.length?statRows(detailedStats(panel.data),threshold):[['Số lượt điểm','0'],['Số học sinh có điểm','0'],['Điểm trung bình','—'],['Trạng thái','Chưa có dữ liệu']];
+     const tableY=y+65,statsWidth=80,histX=x+83,histWidth=49;
+     doc.autoTable({...tableBase,startY:tableY,tableWidth:statsWidth,margin:{left:x,right:297-x-statsWidth,bottom:15},head:[['Thống kê nhóm','Số liệu']],body:[['Số lớp',String(unique(panel.data.map(r=>r.class)).length)],...stat],styles:{...tableBase.styles,fontSize:6.5,cellPadding:0.9},columnStyles:{0:{cellWidth:49},1:{cellWidth:31}}});
+     const hist=scoreHistogram(panel.data,width),binRows=[];
+     // At the finest bin size use two pairs to keep all bins on one page.
+     const pairs=hist.labels.length>25?2:1;
+     for(let i=0;i<hist.labels.length;i+=pairs){const line=[];for(let k=0;k<pairs;k++)line.push(hist.labels[i+k]??'',hist.values[i+k]??'');binRows.push(line);}
+     doc.autoTable({...tableBase,startY:tableY,tableWidth:histWidth,margin:{left:histX,right:297-histX-histWidth,bottom:15},head:[Array.from({length:pairs},()=>['Điểm','Số lượt']).flat()],body:binRows,styles:{...tableBase.styles,fontSize:6,cellPadding:0.45},columnStyles:Object.fromEntries(Array.from({length:pairs},(_,k)=>[[k*2,{cellWidth:histWidth/pairs*0.65}],[k*2+1,{cellWidth:histWidth/pairs*0.35}]]).flat())});
+    }
 
    }else{
     doc.setFontSize(9);doc.text(job.panels[0].label,14,y);await plot(job.data,14,y+3,269,64);const stats=detailedStats(job.data),hist=scoreHistogram(job.data,width),tableY=y+73;doc.autoTable({...tableBase,startY:tableY,tableWidth:142,margin:{left:14,right:141,bottom:15},head:[['Báo cáo khối '+job.grade,'Số liệu']],body:[['Số lớp',String(unique(job.data.map(r=>r.class)).length)],...statRows(stats,threshold)],columnStyles:{0:{cellWidth:83},1:{cellWidth:59}}});
