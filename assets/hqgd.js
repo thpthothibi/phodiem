@@ -1,10 +1,10 @@
-import './tn2027.js?v=tn-cn-complete-v8-4';
-import {makePDFJobs,createHQGDPDF,availablePDFSubjects} from './hqgd-pdf.mjs?v=tn-cn-complete-v8-4';
-import {selectPeriod,periodLabel,classTable,baselineTable,availablePeriodIds,preferredAvailablePeriod} from './hqgd-period.mjs?v=tn-cn-complete-v8-4';
-import {buildHQGD,missingTeacher} from './hqgd-data.mjs?v=tn-cn-complete-v8-4';
-import {readAssignmentWorkbook,parseAssignments} from './hqgd-import.mjs?v=tn-cn-complete-v8-4';
-import {className} from './hqgd-source/engine.mjs?v=tn-cn-complete-v8-4';
-import {exportResults,exportClassWorkbook,exportTeacherWorkbook} from './hqgd-source/excel.mjs?v=tn-cn-complete-v8-4';
+import './tn2027.js?v=tn-cn-complete-v8-5';
+import {makePDFJobs,createHQGDPDF,availablePDFSubjects} from './hqgd-pdf.mjs?v=tn-cn-complete-v8-5';
+import {selectPeriod,periodLabel,classTable,baselineTable,availablePeriodIds,preferredAvailablePeriod} from './hqgd-period.mjs?v=tn-cn-complete-v8-5';
+import {buildHQGD,missingTeacher} from './hqgd-data.mjs?v=tn-cn-complete-v8-5';
+import {readAssignmentWorkbook,parseAssignments} from './hqgd-import.mjs?v=tn-cn-complete-v8-5';
+import {className} from './hqgd-source/engine.mjs?v=tn-cn-complete-v8-5';
+import {exportResults,exportClassWorkbook,exportTeacherWorkbook} from './hqgd-source/excel.mjs?v=tn-cn-complete-v8-5';
 const el=id=>document.getElementById(id),E=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const fmt=n=>n===null||n===undefined?'—':Number(n).toLocaleString('vi-VN',{minimumFractionDigits:2,maximumFractionDigits:2});
 const unique=a=>[...new Set(a)].sort((a,b)=>String(a).localeCompare(String(b),'vi',{numeric:true}));
