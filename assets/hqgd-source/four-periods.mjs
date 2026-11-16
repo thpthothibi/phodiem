@@ -1,10 +1,10 @@
-import {calculate,annual,className,norm} from './engine.mjs?v=tn20261116';
+import {calculate,annual,className,norm} from './engine.mjs?v=tn-pdf-cn-20261116';
 export const PERIODS=[{id:'gk1',term:1,key:'mid',label:'Giữa HK1'},{id:'hk1',term:1,key:'final',label:'HK1'},{id:'gk2',term:2,key:'mid',label:'Giữa HK2'},{id:'hk2',term:2,key:'final',label:'HK2'}];
 export function fourPeriods(first=[],second=[]){
  const a=first.length?calculate(first):null,b=second.length?calculate(second):null,map=new Map();
- for(let [term,r] of [[1,a],[2,b]])for(let x of r?.rows||[]){let k=x.subject+'|'+x.class;if(!map.has(k))map.set(k,{subject:x.subject,class:x.class,teacher1:'',teacher2:'',gk1:null,hk1:null,gk2:null,hk2:null,dgk1:null,dhk1:null,dgk2:null,dhk2:null,effect1:null,effect2:null,total:null});let row=map.get(k);Object.assign(row,{['teacher'+term]:x.teacher,['gk'+term]:x.mid,['hk'+term]:x.final,['dgk'+term]:x.deltaMid,['dhk'+term]:x.deltaFinal,['effect'+term]:x.effect});}
+ for(let [term,r] of [[1,a],[2,b]])for(let x of r?.rows||[]){let k=x.subject+'|'+x.class;if(!map.has(k))map.set(k,{subject:x.subject,class:x.class,teacher1:'',teacher2:'',gk1:null,hk1:null,gk2:null,hk2:null,dgk1:null,dhk1:null,dgk2:null,dhk2:null,effect1:null,effect2:null,total:null});let row=map.get(k);Object.assign(row,{...(x.referenceByTeacher?{referenceByTeacher:true}:{}),['teacher'+term]:x.teacher,['gk'+term]:x.mid,['hk'+term]:x.final,['dgk'+term]:x.deltaMid,['dhk'+term]:x.deltaFinal,['effect'+term]:x.effect});}
  for(let r of map.values())r.total=r.effect1===null||r.effect2===null?null:r.effect1+r.effect2;
- const teachers=annual(a,b).map(t=>({...t,term1:t.hk1,term2:t.hk2}));
+ const teachers=annual(a,b).map(t=>({...t,term1:t.hk1,term2:t.hk2,...([...(a?.teachers||[]),...(b?.teachers||[])].some(x=>x.subject===t.subject&&x.teacher===t.teacher&&x.referenceByTeacher)?{referenceByTeacher:true}:{})}));
  // Each period's teacher indicator is the SUM of class deviations, within subject.
  for(let t of teachers)for(let p of PERIODS){let list=(p.term===1?a:b)?.rows.filter(r=>r.subject===t.subject&&r.teacher===t.teacher)||[];let key=p.key==='mid'?'deltaMid':'deltaFinal';t[p.id]=list.length&&list.every(r=>r[key]!==null)?list.reduce((s,r)=>s+r[key],0):null;}
  return {rows:[...map.values()],teachers,first:a,second:b};

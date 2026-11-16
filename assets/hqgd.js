@@ -1,10 +1,10 @@
-import './tn2027.js?v=tn-boot-fix-20261116';
-import {makePDFJobs,createHQGDPDF} from './hqgd-pdf.mjs?v=tn20261116';
-import {selectPeriod,periodLabel,classTable,baselineTable} from './hqgd-period.mjs?v=tn20261116';
-import {buildHQGD,missingTeacher} from './hqgd-data.mjs?v=tn20261116';
-import {readAssignmentWorkbook,parseAssignments} from './hqgd-import.mjs?v=tn20261116';
-import {className} from './hqgd-source/engine.mjs?v=tn20261116';
-import {exportResults,exportClassWorkbook,exportTeacherWorkbook} from './hqgd-source/excel.mjs?v=tn20261116';
+import './tn2027.js?v=tn-pdf-cn-20261116';
+import {makePDFJobs,createHQGDPDF} from './hqgd-pdf.mjs?v=tn-pdf-cn-20261116';
+import {selectPeriod,periodLabel,classTable,baselineTable} from './hqgd-period.mjs?v=tn-pdf-cn-20261116';
+import {buildHQGD,missingTeacher} from './hqgd-data.mjs?v=tn-pdf-cn-20261116';
+import {readAssignmentWorkbook,parseAssignments} from './hqgd-import.mjs?v=tn-pdf-cn-20261116';
+import {className} from './hqgd-source/engine.mjs?v=tn-pdf-cn-20261116';
+import {exportResults,exportClassWorkbook,exportTeacherWorkbook} from './hqgd-source/excel.mjs?v=tn-pdf-cn-20261116';
 const el=id=>document.getElementById(id),E=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const fmt=n=>n===null||n===undefined?'—':Number(n).toLocaleString('vi-VN',{minimumFractionDigits:2,maximumFractionDigits:2});
 const unique=a=>[...new Set(a)].sort((a,b)=>String(a).localeCompare(String(b),'vi',{numeric:true}));
@@ -34,7 +34,7 @@ function render(){if(!active)return;sync();const mode=el('hqTerm').value;el('hqC
  if(!el('hqGrade').value){partitions=[];el('hqResults').innerHTML='<section class="card hq-empty">Chọn khối để xem báo cáo HQGD.</section>';el('hqHint').textContent='Chưa chọn khối. Không tự tải báo cáo toàn trường.';el('hqStats').innerHTML='';el('hqExport').disabled=el('hqPrint').disabled=true;return;}
  try{partitions=buildHQGD(records,assignmentList(),el('hqYear').value,el('hqGrade').value);}catch(e){el('hqResults').textContent=e.message;el('hqExport').disabled=el('hqPrint').disabled=true;return;}
  const selected=selectedGroups(),rows=selected.flatMap(p=>currentTerm(p)?.rows||[]).filter(chosen),missing=rows.filter(r=>!r.assigned).length;
- el('hqHint').textContent=`Năm ${el('hqYear').value} · Khối ${el('hqGrade').value} · ${selectedLabel()}. Lọc lớp chỉ thay phần hiển thị, không thay BQ khối hoặc hạng.`+(missing?` ${missing} dòng lớp/môn chưa phân công giáo viên.`:'')+(el('hqGrade').value==='12'?' Nhóm chọn TN thống kê theo lớp học môn. Học sinh chọn TN chưa ghép được lớp được tách riêng; cần cập nhật Worker TN 2027 hoặc đối chiếu tên và lớp hành chính.':'');
+ el('hqHint').textContent=`Năm ${el('hqYear').value} · Khối ${el('hqGrade').value} · ${selectedLabel()}. Lọc lớp chỉ thay phần hiển thị, không thay BQ khối hoặc hạng.`+(missing?` ${missing} dòng lớp/môn chưa phân công giáo viên.`:'')+(el('hqGrade').value==='12'?' Nhóm chọn TN thống kê theo lớp học môn. Học sinh chọn TN chưa ghép được lớp được tách riêng; cần cập nhật Worker TN 2027 hoặc đối chiếu tên và lớp hành chính.':'')+(['10','12'].includes(el('hqGrade').value)?' Công nghệ: BQ tham chiếu theo từng giáo viên trong khối, cùng nhóm; không xếp hạng giữa các GV.':'');
  el('hqStats').innerHTML=[['Lớp × môn × nhóm',rows.length],['Dòng đủ điểm theo cách tính',rows.filter(r=>r.effect!==null).length],['Có phân công',rows.filter(r=>r.assigned).length],['Nhóm báo cáo',selected.length]].map(([k,v])=>`<div class="hq-stat"><small>${E(k)}</small><strong>${v}</strong></div>`).join('');
  el('hqExport').disabled=el('hqPrint').disabled=!selected.length;
  if(tab==='assign'){renderAssignments();return;}if(tab==='export'){renderExport();return;}
@@ -61,7 +61,7 @@ function renderExport(){
  el('hqFontFiles').onchange=async e=>{try{const files=[...e.target.files],regular=files.find(f=>/^times\.ttf$/i.test(f.name)),bold=files.find(f=>/^timesbd\.ttf$/i.test(f.name));if(!regular||!bold)throw Error('Chọn cùng lúc hai file times.ttf và timesbd.ttf để có nét thường và đậm đúng.');if(files.some(f=>f.size>3*1024*1024))throw Error('Mỗi file phông tối đa 3 MB.');const read=async f=>{const bytes=new Uint8Array(await f.arrayBuffer());if(!(bytes[0]===0&&bytes[1]===1&&bytes[2]===0&&bytes[3]===0))throw Error('File không phải phông TrueType hợp lệ.');let s='';for(let i=0;i<bytes.length;i+=16384)s+=String.fromCharCode(...bytes.subarray(i,i+16384));return btoa(s);};const fonts={name:'Times New Roman',normal:await read(regular),bold:await read(bold)};hqgdFonts=fonts;let saved=true;try{localStorage.setItem('htb.hqgd.pdf.fonts',JSON.stringify(fonts));}catch{saved=false;}el('hqFontName').textContent=fonts.name;el('hqFontStatus').textContent=saved?'Đã nạp Times New Roman; PDF tiếp theo dùng phông này.':'Đã nạp cho phiên hiện tại; bộ nhớ trình duyệt không đủ để giữ cho lần sau.';}catch(error){el('hqFontStatus').textContent=error.message;}finally{e.target.value='';}};
  const run=(preview=false)=>{try{const subjects=[...document.querySelectorAll('[data-pdf-subject]:checked')].map(c=>c.value);if(!subjects.length)throw Error('Chọn ít nhất một môn để xuất.');el('hqPDFStatus').textContent='Đang tạo PDF…';const grades=el('hqPDFGrades').value==='all'?unique(records.filter(r=>r.year===el('hqYear').value).map(r=>String(r.grade))):[el('hqGrade').value];const jobs=makePDFJobs(records,assignmentList(),{year:el('hqYear').value,grades,subjects,period:el('hqTerm').value,combined:el('hqCombined').checked,klass:el('hqClass').value,tn:el('hqTN').value});const doc=createHQGDPDF(jobs,{jsPDF:window.jspdf?.jsPDF,font:window.HTB_PDF_FONT,fonts:hqgdFonts});
  if(preview){const u=URL.createObjectURL(doc.output('blob')),a=document.createElement('a');a.href=u;a.target='_blank';a.rel='noopener';a.click();setTimeout(()=>URL.revokeObjectURL(u),60000);}else doc.save(`HQGD_${el('hqYear').value}_${el('hqTerm').value}_${el('hqCombined').checked?'chung':'rieng'}.pdf`);
- el('hqPDFStatus').textContent=`Đã tạo ${jobs.length} môn, ${doc.getNumberOfPages()} trang. ${selectedLabel()}.`;
+ el('hqPDFStatus').textContent=`Đã tạo ${jobs.length} môn, ${doc.getNumberOfPages()} trang. ${selectedLabel()}.`+(jobs.some(j=>j.warnings?.length)?' Có dữ liệu chọn TN chưa ghép lớp; xem ghi chú trong PDF.':'');
  }catch(e){el('hqPDFStatus').textContent='Không xuất được: '+e.message;}};
  el('hqPDFPreview').onclick=()=>run(true);el('hqPDFDownload').onclick=()=>run(false);
 }

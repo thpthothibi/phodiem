@@ -1,6 +1,6 @@
 // Adapter only. The original HQGD engine and four-period formula modules remain unchanged.
-import {SUBJECTS,className} from './hqgd-source/engine.mjs?v=tn20261116';
-import {fourPeriods} from './hqgd-source/four-periods.mjs?v=tn20261116';
+import {SUBJECTS,className} from './hqgd-source/engine.mjs?v=tn-pdf-cn-20261116';
+import {fourPeriods} from './hqgd-source/four-periods.mjs?v=tn-pdf-cn-20261116';
 export const PERIODS=['Giữa HK1','HK1','Giữa HK2','HK2'];
 export const missingTeacher=t=>t.startsWith('[Chưa phân công] ');
 const core=s=>['Toán','Ngữ văn','Văn','Giáo dục quốc phòng và an ninh'].includes(s);
@@ -30,7 +30,7 @@ export function buildHQGD(records,assignments,year,grade){
    for(const r of term.rows){r.assigned=!missingTeacher(r.teacher);if(!r.assigned)unassigned.add(r.subject);}
    term.teachers=term.teachers.filter(r=>!missingTeacher(r.teacher));
    // Unassigned classes must not make a teacher ranking look complete.
-   for(const r of term.teachers)if(term.rows.some(x=>x.subject===r.subject&&!x.assigned))r.rank=null;
+   for(const r of term.teachers)if(r.referenceByTeacher||term.rows.some(x=>x.subject===r.subject&&!x.assigned))r.rank=null;
   }
   report.teachers=report.teachers.filter(r=>!missingTeacher(r.teacher));
   return {group,report,counts,unassigned:[...unassigned]};

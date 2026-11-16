@@ -6,6 +6,7 @@ export function validateScope(rows,year){const classes=schoolClasses(year);retur
 export const norm=s=>String(s??'').normalize('NFC').trim().replace(/\s+/g,' ');
 export function className(s){return norm(s).toUpperCase().replace(/^(10|11|12)A0*(\d+)$/,(_,g,n)=>g+'A'+String(Number(n)).padStart(2,'0'));}
 export function number(s){if(s===null||s===undefined||s==='')return null;let n=Number(String(s).replace(',','.'));return Number.isFinite(n)?n:null;}
+const teacherReference=r=>['10','12'].includes(r.class.slice(0,2))&&['Công nghệ','Cong nghe'].includes(r.subject);
 const mean=a=>a.length?a.reduce((s,n)=>s+n,0)/a.length:null;
 // Excel RANK.EQ descending: ties share rank; the next rank has a gap.
 const rank=(v,all)=>v===null?null:1+all.filter(x=>x!==null&&x>v+1e-10).length;
@@ -18,14 +19,14 @@ export function validate(rows){
 export function calculate(input){
  const errors=validate(input);if(errors.length)throw Error(errors.slice(0,12).join('\n'));
  const rows=input.map(r=>({...r,class:className(r.class),teacher:norm(r.teacher),mid:r.mid??null,final:r.final??null}));
- const groups=new Map();for(let r of rows){let key=r.subject+'|'+r.class.slice(0,2);if(!groups.has(key))groups.set(key,[]);groups.get(key).push(r);}
+ const groups=new Map();for(let r of rows){if(teacherReference(r))r.referenceByTeacher=true;let key=r.subject+'|'+r.class.slice(0,2)+(r.referenceByTeacher?'|'+r.teacher:'');if(!groups.has(key))groups.set(key,[]);groups.get(key).push(r);}
  const baselines=[];
- for(let [key,a] of groups){let mid=mean(a.filter(r=>r.mid!==null).map(r=>r.mid)),final=mean(a.filter(r=>r.final!==null).map(r=>r.final));let complete=a.every(r=>r.mid!==null&&r.final!==null);
- baselines.push({subject:a[0].subject,grade:a[0].class.slice(0,2),mid,final,classes:a.length,complete});
- for(let r of a){r.baseMid=mid;r.baseFinal=final;r.deltaMid=r.mid===null?null:r.mid-mid;r.deltaFinal=r.final===null?null:r.final-final;r.effect=r.deltaMid===null||r.deltaFinal===null?null:r.deltaMid+r.deltaFinal;r.complete=complete;}
+ for(let [key,a] of groups){const byTeacher=a[0].referenceByTeacher,unassigned=byTeacher&&a[0].teacher.startsWith('[Chưa phân công] ');let mid=mean(a.filter(r=>r.mid!==null).map(r=>r.mid)),final=mean(a.filter(r=>r.final!==null).map(r=>r.final));if(unassigned){mid=null;final=null;}let complete=!unassigned&&a.every(r=>r.mid!==null&&r.final!==null);
+ baselines.push({subject:a[0].subject,grade:a[0].class.slice(0,2),mid,final,classes:a.length,complete,...(byTeacher?{teacher:a[0].teacher,referenceByTeacher:true}:{})});
+ for(let r of a){r.baseMid=mid;r.baseFinal=final;r.deltaMid=r.mid===null||mid===null?null:r.mid-mid;r.deltaFinal=r.final===null||final===null?null:r.final-final;r.effect=r.deltaMid===null||r.deltaFinal===null?null:r.deltaMid+r.deltaFinal;r.complete=complete;}
  for(let r of a){r.rankMid=complete?rank(r.deltaMid,a.map(x=>x.deltaMid)):null;r.rankFinal=complete?rank(r.deltaFinal,a.map(x=>x.deltaFinal)):null;r.rank=complete?rank(r.effect,a.map(x=>x.effect)):null;}}
- const t=new Map();for(let r of rows){let key=r.subject+'|'+r.teacher;if(!t.has(key))t.set(key,{subject:r.subject,teacher:r.teacher,classes:[],effect:0,complete:true});let x=t.get(key);x.classes.push(r.class);x.complete&&=r.complete&&r.effect!==null;if(r.effect!==null)x.effect+=r.effect;}
- const teachers=[...t.values()];for(let x of teachers){if(!x.complete)x.effect=null;let a=teachers.filter(y=>y.subject===x.subject);x.rank=a.every(y=>y.complete)?rank(x.effect,a.map(y=>y.effect)):null;}
+ const t=new Map();for(let r of rows){let key=r.subject+'|'+r.teacher;if(!t.has(key))t.set(key,{subject:r.subject,teacher:r.teacher,classes:[],effect:0,complete:true,...(r.referenceByTeacher?{referenceByTeacher:true}:{})});let x=t.get(key);x.classes.push(r.class);x.complete&&=r.complete&&r.effect!==null;if(r.effect!==null)x.effect+=r.effect;}
+ const teachers=[...t.values()];for(let x of teachers){if(!x.complete)x.effect=null;let a=teachers.filter(y=>y.subject===x.subject);x.rank=!x.referenceByTeacher&&a.every(y=>y.complete)?rank(x.effect,a.map(y=>y.effect)):null;}
  return {version:VERSION,rows,teachers,baselines,complete:rows.length>0&&rows.every(r=>r.complete)};
 }
 export function annual(h1,h2){
