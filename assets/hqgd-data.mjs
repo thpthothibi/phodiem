@@ -1,6 +1,6 @@
 // Adapter only. The original HQGD engine and four-period formula modules remain unchanged.
-import {SUBJECTS,className} from './hqgd-source/engine.mjs?v=tn-pdf-cn-20261116';
-import {fourPeriods} from './hqgd-source/four-periods.mjs?v=tn-pdf-cn-20261116';
+import {SUBJECTS,className} from './hqgd-source/engine.mjs?v=tn-specialty-column-v5';
+import {fourPeriods} from './hqgd-source/four-periods.mjs?v=tn-specialty-column-v5';
 export const PERIODS=['Giữa HK1','HK1','Giữa HK2','HK2'];
 export const missingTeacher=t=>t.startsWith('[Chưa phân công] ');
 const core=s=>['Toán','Ngữ văn','Văn','Giáo dục quốc phòng và an ninh'].includes(s);
@@ -18,7 +18,7 @@ export function buildHQGD(records,assignments,year,grade){
   for(const row of classes.values()){
    const assignment=assignments.find(a=>a.year===year&&a.subject===row.subject&&className(a.class)===row.class);
    const means=row.values.map(v=>!group.includes('chưa ghép lớp')&&v.length?v.reduce((s,n)=>s+n,0)/v.length:null);
-   counts.push({subject:row.subject,class:row.class,counts:row.values.map(v=>v.length)});
+   const sourceClass=globalThis.HTB_TN2027?.data.assignments.find(a=>a.year===year&&a.subject===row.subject&&a.class===row.class)?.sourceClass;const rosterCount=group==='Chọn TN'&&sourceClass?(globalThis.HTB_TN2027?.data.counts[row.subject]?.[sourceClass]??null):null;counts.push({subject:row.subject,class:row.class,counts:row.values.map(v=>v.length),rosterCount});
    for(const t of [1,2]){
     // Include the union of classes across four periods so missing periods stay blank and block ranks.
     terms[t].push({subject:row.subject,class:row.class,teacher:(group.includes('chưa ghép lớp')?'':assignment?.['teacher'+t])||'[Chưa phân công] '+row.class,mid:means[(t-1)*2],final:means[(t-1)*2+1]});

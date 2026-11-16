@@ -1,10 +1,10 @@
-import './tn2027.js?v=tn-pdf-cn-20261116';
-import {makePDFJobs,createHQGDPDF} from './hqgd-pdf.mjs?v=tn-pdf-cn-20261116';
-import {selectPeriod,periodLabel,classTable,baselineTable} from './hqgd-period.mjs?v=tn-pdf-cn-20261116';
-import {buildHQGD,missingTeacher} from './hqgd-data.mjs?v=tn-pdf-cn-20261116';
-import {readAssignmentWorkbook,parseAssignments} from './hqgd-import.mjs?v=tn-pdf-cn-20261116';
-import {className} from './hqgd-source/engine.mjs?v=tn-pdf-cn-20261116';
-import {exportResults,exportClassWorkbook,exportTeacherWorkbook} from './hqgd-source/excel.mjs?v=tn-pdf-cn-20261116';
+import './tn2027.js?v=tn-specialty-column-v5';
+import {makePDFJobs,createHQGDPDF} from './hqgd-pdf.mjs?v=tn-specialty-column-v5';
+import {selectPeriod,periodLabel,classTable,baselineTable} from './hqgd-period.mjs?v=tn-specialty-column-v5';
+import {buildHQGD,missingTeacher} from './hqgd-data.mjs?v=tn-specialty-column-v5';
+import {readAssignmentWorkbook,parseAssignments} from './hqgd-import.mjs?v=tn-specialty-column-v5';
+import {className} from './hqgd-source/engine.mjs?v=tn-specialty-column-v5';
+import {exportResults,exportClassWorkbook,exportTeacherWorkbook} from './hqgd-source/excel.mjs?v=tn-specialty-column-v5';
 const el=id=>document.getElementById(id),E=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const fmt=n=>n===null||n===undefined?'—':Number(n).toLocaleString('vi-VN',{minimumFractionDigits:2,maximumFractionDigits:2});
 const unique=a=>[...new Set(a)].sort((a,b)=>String(a).localeCompare(String(b),'vi',{numeric:true}));
