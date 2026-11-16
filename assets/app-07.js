@@ -7,7 +7,7 @@ const esc=s=>String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;'
 const number=n=>new Intl.NumberFormat('vi-VN',{maximumFractionDigits:2}).format(n);
 function toast(s){$('toast').textContent=s;$('toast').style.display='block';clearTimeout(toast.t);toast.t=setTimeout(()=>$('toast').style.display='none',5000);}
 function save(nextRecords=records,nextSettings=settings){try{if(KEY==='hoclieu.public.v1'&&(typeof cloudApplying==='undefined'||!cloudApplying)){toast('Đang ở chế độ xem. Vào Kho dữ liệu Cloudflare, nhập mã quản lý có quyền ghi trước khi nhập/cập nhật điểm.');return false;}localStorage.setItem(KEY,JSON.stringify({records:nextRecords,settings:nextSettings,...(typeof cloudLocalState==='function'?{cloudSync:cloudLocalState()}:{})}));window.dispatchEvent(new Event('htb-data-saved'));return true;}catch{toast('Không lưu được trên trình duyệt. Có thể bộ nhớ đã đầy. Hãy tải bản sao Excel.');return false;}}
-function source(){return demo?demoRecords:records.map(r=>window.HTB_TN2027.resolve(r));}
+function source(){return demo?demoRecords:records.map(r=>(window.HTB_TN2027?.resolve(r)||r));}
 function key(r){return recordKey(r);}
 function opts(id,items,selected){$(id).innerHTML=items.map(x=>`<option value="${esc(x)}" ${selected.includes(String(x))?'selected':''}>${esc(x)}</option>`).join('');if(typeof syncFilterMenu==='function')syncFilterMenu(id);}
 function picked(id){return [...$(id).selectedOptions].map(x=>x.value);}

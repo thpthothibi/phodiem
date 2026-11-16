@@ -42,7 +42,7 @@ async function exportPDF(options=null){
  if(pdfBusy)throw Error('Đang tạo PDF khác, hãy thử lại.');if(!dataSource.length)return;
  if(!window.jspdf)return toast('Chưa tải được bộ tạo PDF. Hãy tải lại trang.');
  pdfBusy=true;$('exportPdf').disabled=true;$('exportPdf').textContent='Đang tạo PDF…';
- const allData=dataSource.map(r=>({...window.HTB_TN2027.resolve(r)})),jobs=buildExportJobs(allData),kind=chartType,metric=$('metric').value,threshold=settings.threshold,isDemo=custom?false:demo,title=custom?options.title:$('customTitle').value.trim()||'PHỔ ĐIỂM & BÁO CÁO TỔNG',width=Number($('binWidth').value),scopeParts=custom?options.scopeParts:[$('year').value,picked('period').join(', ')||'Tất cả kỳ',picked('class').length?'Lớp '+picked('class').join(', '):'Tất cả lớp'];
+ const allData=dataSource.map(r=>({...(window.HTB_TN2027?.resolve(r)||r)})),jobs=buildExportJobs(allData),kind=chartType,metric=$('metric').value,threshold=settings.threshold,isDemo=custom?false:demo,title=custom?options.title:$('customTitle').value.trim()||'PHỔ ĐIỂM & BÁO CÁO TỔNG',width=Number($('binWidth').value),scopeParts=custom?options.scopeParts:[$('year').value,picked('period').join(', ')||'Tất cả kỳ',picked('class').length?'Lớp '+picked('class').join(', '):'Tất cả lớp'];
  try{
   if(!pdfFont&&window.HTB_PDF_FONT)pdfFont=window.HTB_PDF_FONT;
   if(!pdfFont){const res=await fetch('vendor/DejaVuSans.ttf');if(!res.ok)throw Error('Không tải được phông chữ tiếng Việt.');const bytes=new Uint8Array(await res.arrayBuffer());let str='';for(let i=0;i<bytes.length;i+=8192)str+=String.fromCharCode(...bytes.subarray(i,i+8192));pdfFont=btoa(str);}

@@ -1,3 +1,4 @@
+import './tn2027.js?v=tn-boot-fix-20261116';
 import {makePDFJobs,createHQGDPDF} from './hqgd-pdf.mjs?v=tn20261116';
 import {selectPeriod,periodLabel,classTable,baselineTable} from './hqgd-period.mjs?v=tn20261116';
 import {buildHQGD,missingTeacher} from './hqgd-data.mjs?v=tn20261116';
