@@ -49,12 +49,15 @@ export function groupedClassTable(groups,teacher=x=>x){
  const subjects=[...new Set(groups.flatMap(g=>g.model.rows.map(r=>r.subject)))];
  for(const subject of subjects)for(const {model,group} of groups){
   const selected=model.rows.filter(r=>r.subject===subject).sort((a,b)=>a.class.localeCompare(b.class,'vi',{numeric:true}));if(!selected.length)continue;
-  rows.push(...classTable({...model,rows:selected},teacher).rows);
-  if(model.kind==='annual')continue;
-  const ref=model.baselines.find(r=>r.subject===subject);if(!ref)continue;
-  const line=Array(headers.length).fill('');line[0]=subject;line[1]='Bình quân';
-  if(model.kind==='combined'){line[3]=ref.mid;line[7]=ref.final;}else line[3]=ref.score;
-  rows.push(line);
+  const sets=selected.some(r=>r.referenceByTeacher)?[...new Set(selected.map(r=>r.teacher))].map(name=>selected.filter(r=>r.teacher===name)):[selected];
+  for(const set of sets){
+   rows.push(...classTable({...model,rows:set},teacher).rows);
+   if(model.kind==='annual')continue;
+   const ref=model.baselines.find(r=>r.subject===subject&&(!r.referenceByTeacher||r.teacher===set[0].teacher));if(!ref)continue;
+   const line=Array(headers.length).fill('');line[0]=subject;line[1]='Bình quân';
+   if(model.kind==='combined'){line[3]=ref.mid;line[7]=ref.final;}else line[3]=ref.score;
+   rows.push(line);
+  }
  }
  return {headers,rows};
 }
@@ -70,7 +73,7 @@ export function combinedTeachers(models){
  }
  const teachers=[...map.values()];
  for(const t of teachers){t.classes=[...new Set(t.classes)].sort((a,b)=>a.localeCompare(b,'vi',{numeric:true}));if(!t.complete)t.effect=null;}
- for(const t of teachers){const peers=teachers.filter(x=>x.subject===t.subject);if(rows.filter(r=>r.subject===t.subject).every(r=>r.assigned&&r.effect!==null)&&peers.every(x=>x.complete))t.rank=rank(t.effect,peers.map(x=>x.effect));}
+ for(const t of teachers){const peers=teachers.filter(x=>x.subject===t.subject);if(!t.referenceByTeacher&&rows.filter(r=>r.subject===t.subject).every(r=>r.assigned&&r.effect!==null)&&peers.every(x=>x.complete))t.rank=rank(t.effect,peers.map(x=>x.effect));}
  return teachers.sort((a,b)=>a.subject.localeCompare(b.subject,'vi')||a.teacher.localeCompare(b.teacher,'vi'));
 }
 
