@@ -42,6 +42,23 @@ export function baselineTable(model){
  return {headers:['Môn','Khối','Số lớp','BQ kỳ đã chọn','Trạng thái'],rows:model.baselines.map(r=>[r.subject,r.grade,r.classes,r.score,r.complete?'Đủ điểm':'Chưa đủ điểm'])};
 }
 
+// One visible class table, with each cohort's reference immediately below its rows.
+export function groupedClassTable(groups,teacher=x=>x){
+ const first=groups[0]?.model;if(!first)return {headers:[],rows:[]};
+ const headers=classTable(first,teacher).headers,rows=[];
+ const subjects=[...new Set(groups.flatMap(g=>g.model.rows.map(r=>r.subject)))];
+ for(const subject of subjects)for(const {model,group} of groups){
+  const selected=model.rows.filter(r=>r.subject===subject).sort((a,b)=>a.class.localeCompare(b.class,'vi',{numeric:true}));if(!selected.length)continue;
+  rows.push(...classTable({...model,rows:selected},teacher).rows);
+  if(model.kind==='annual')continue;
+  const ref=model.baselines.find(r=>r.subject===subject);if(!ref)continue;
+  const line=Array(headers.length).fill('');line[0]=subject;line[1]=group.startsWith('10A01')?'Bình quân 10A01':'Bình quân các lớp còn lại';
+  if(model.kind==='combined'){line[3]=ref.mid;line[7]=ref.final;}else line[3]=ref.score;
+  rows.push(line);
+ }
+ return {headers,rows};
+}
+
 export function requiredPeriods(id,combined=false){
  if(!PERIOD_OPTIONS.some(x=>x[0]===id))throw Error('Kỳ HQGD không hợp lệ.');
  if(id==='annual')return ['Giữa HK1','HK1','Giữa HK2','HK2'];

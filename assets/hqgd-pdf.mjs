@@ -1,5 +1,5 @@
-import {buildHQGD,missingTeacher,cohort} from './hqgd-data.mjs?v=tn-cn-complete-v8-5';
-import {selectPeriod,periodLabel,requiredPeriods} from './hqgd-period.mjs?v=tn-cn-complete-v8-5';
+import {buildHQGD,missingTeacher,cohort} from './hqgd-data.mjs?v=hqgd-bq-10a01-v8-6-2';
+import {selectPeriod,periodLabel,requiredPeriods} from './hqgd-period.mjs?v=hqgd-bq-10a01-v8-6-2';
 const cmp=(a,b)=>String(a).localeCompare(String(b),'vi',{numeric:true});
 const format=v=>v===null||v===undefined?'':Number(Math.abs(v)<0.005?0:v).toLocaleString('vi-VN',{minimumFractionDigits:2,maximumFractionDigits:2});
 const displayTeacher=t=>!t||missingTeacher(t)?'Chưa phân công':t;
@@ -34,14 +34,25 @@ export function availablePDFSubjects(records,{year,grade,subject='',klass='',tn=
  const counts=globalThis.HTB_TN2027?.data.counts||{};
  return [...new Set([...fallback,...rows.filter(r=>cohort(r)==='Chung'||counts[r.subject]).map(r=>r.subject)])].sort(cmp);
 }
+// Calculation cohorts stay isolated; only the class table presentation is combined.
+export function classSections(job){
+ const ten=job.sections.filter(s=>s.grade==='10');if(ten.length<2)return job.sections;
+ const first=job.sections.indexOf(ten[0]);
+ return job.sections.flatMap((s,i)=>s.grade!=='10'?[s]:i===first?[{...s,group:'Chung',classGroups:ten}]:[]);
+}
 export function classTable(section,job){
+ if(section.classGroups){
+  const tables=section.classGroups.map(s=>classTable(s,job)),body=[],baselineRows=[];
+  for(const t of tables){baselineRows.push(...(t.baselineRows||[]).map(i=>i+body.length));body.push(...t.body);}
+  return {...tables[0],body,baselineRows,baselineStart:baselineRows[0]??body.length};
+ }
  const {model}=section,annual=model.kind==='annual',term=job.period.endsWith('2')?2:1;
  if(annual){return {head:[[{content:'Lớp',rowSpan:2},{content:'Giáo viên HK1 / HK2',rowSpan:2},{content:section.group==='Chọn TN'?'Sĩ số':'HS có điểm',rowSpan:2},{content:'Học kỳ 1',colSpan:3},{content:'Học kỳ 2',colSpan:3},{content:'HQ cả năm',rowSpan:2},{content:'Hạng',rowSpan:2}],['ĐL GK','ĐL HK','HQ HK1','ĐL GK','ĐL HK','HQ HK2']],body:section.rows.sort((a,b)=>cmp(a.class,b.class)).map(r=>[displayClass(r.class,section.group),displayTeacher(r.teacher1)+(r.teacher1===r.teacher2?'':' / '+displayTeacher(r.teacher2)),studentCount(section,r,job.period,job.combined),...['dgk1','dhk1','effect1','dgk2','dhk2','effect2','effect','rank'].map(k=>k==='rank'?r[k]??'':format(r[k]))]),widths:[16,44,19,14,14,15,14,14,15,16,13]};}
  const mid=job.period.startsWith('gk'),both=model.kind==='combined',b=section.baseline;
  const rowData=r=>[displayClass(r.class,section.group),displayTeacher(r.teacher),studentCount(section,r,job.period,job.combined),...(both||mid?[format(r.mid),format(r.deltaMid),both?r.rankMid??'':r.rank??'']:['','','']),...(!mid?[format(r.final),format(r.deltaFinal),both?r.rankFinal??'':r.rank??'']:['','','']),format(r.effect),r.rank??''];
- const referenceRow=ref=>[{content:ref.referenceByTeacher?'Bình quân':'K'+section.grade,colSpan:3,styles:{halign:'left'}},both||mid?format(ref.mid):'','','',!mid?format(ref.final):'','','','',''];
+ const referenceRow=ref=>[{content:section.grade==='10'?(section.group.startsWith('10A01')?'Bình quân 10A01':'Bình quân các lớp còn lại'):ref.referenceByTeacher?'Bình quân':'K'+section.grade,colSpan:3,styles:{halign:'left'}},both||mid?format(ref.mid):'','','',!mid?format(ref.final):'','','','',''];
  const references=model.baselines.filter(x=>x.subject===job.subject&&(!x.referenceByTeacher||!missingTeacher(x.teacher||''))),body=[],baselineRows=[];
- const technology=job.subject==='Công nghệ'&&['10','12'].includes(String(section.grade));
+ const technology=job.subject==='Công nghệ'&&section.rows.some(r=>r.referenceByTeacher);
  if(technology){
   const groups=new Map();for(const r of [...section.rows].sort((a,b)=>cmp(a.class,b.class))){if(!groups.has(r.teacher))groups.set(r.teacher,[]);groups.get(r.teacher).push(r);}
   const order=t=>{const n=String(t).normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase();return missingTeacher(t)?3:n.includes('chuan')?0:n.includes('ngan')?1:2;};
@@ -73,7 +84,7 @@ export function createHQGDPDF(jobs,{jsPDF,font,fonts,onTeacherPage}){
  const pageHeader=()=>{const n=doc.getCurrentPageInfo().pageNumber;pages.set(n,currentJob);doc.setTextColor(0);doc.setFont('VN','bold');doc.setFontSize(10);doc.text('TRƯỜNG THPT HỒ THỊ BI',12,11);doc.setFontSize(11);const title=`KẾT QUẢ DẠY - HỌC MÔN ${currentJob.subject.toLocaleUpperCase('vi')}`;doc.text(title,105,18,{align:'center'});doc.setFont('VN','bold');doc.setFontSize(8.5);doc.text(`${currentJob.label} (${currentJob.year})`,105,24,{align:'center'});};
  function runTable(spec,startY,highlight=false,density={fontSize:7.6,padding:1.1}){const sum=spec.widths.reduce((a,b)=>a+b,0);doc.autoTable({startY,margin:{top:32,bottom:19,left:12,right:12},tableWidth:186,theme:'grid',head:spec.head,body:spec.body,styles:{font:'VN',fontStyle:'normal',fontSize:density.fontSize,cellPadding:density.padding,lineColor:[30,30,30],lineWidth:.15,textColor:[0,0,0],halign:'center',valign:'middle',overflow:'linebreak'},headStyles:{font:'VN',fontStyle:'bold',fillColor:[255,255,255],textColor:[0,0,0]},columnStyles:Object.fromEntries(spec.widths.map((w,i)=>[i,{cellWidth:w*186/sum,...(i===1?{halign:'left'}:{})}])),rowPageBreak:'avoid',showHead:'everyPage',didParseCell(data){if(highlight&&currentJob.period!=='annual'&&data.section==='body'&&(spec.baselineRows||[]).includes(data.row.index)){data.cell.styles.fillColor=green;data.cell.styles.fontStyle='bold';}else if(!highlight&&data.section==='head')data.cell.styles.fillColor=blue;if(highlight&&currentJob.period!=='annual'&&data.column.index>=6&&data.column.index<=8)data.cell.styles.fillColor=green;},didDrawPage:pageHeader});return doc.lastAutoTable.finalY;}
  jobs.forEach((job,index)=>{if(index)doc.addPage();currentJob=job;pageHeader();let y=33;doc.setFontSize(9);doc.setFont('VN','bold');doc.text('1. Kết quả khối, lớp',12,y);y+=5;
- for(const section of job.sections){if(y>244){doc.addPage();pageHeader();y=34;}doc.setFont('VN','bold');doc.setFontSize(8.5);doc.text('Khối '+section.grade+' - '+section.group,12,y);y=runTable(classTable(section,job),y+2,true)+8;}
+ for(const section of classSections(job)){if(y>244){doc.addPage();pageHeader();y=34;}doc.setFont('VN','bold');doc.setFontSize(8.5);doc.text('Khối '+section.grade+' - '+section.group,12,y);y=runTable(classTable(section,job),y+2,true)+8;}
  if(!job.sections.length)return;
  const teacherStart=doc.getNumberOfPages()+1,groups=teacherGroups(job);
  const densities=[{fontSize:7.6,padding:1.1,gap:6},{fontSize:7.2,padding:.8,gap:4},{fontSize:6.8,padding:.6,gap:3},{fontSize:6.4,padding:.4,gap:2.5},{fontSize:6,padding:.25,gap:2},{fontSize:5.8,padding:.1,gap:1.5}];

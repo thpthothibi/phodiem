@@ -1,4 +1,4 @@
-import {calculate,annual,className,norm} from './engine.mjs?v=tn-cn-complete-v8-5';
+import {calculate,annual,className,norm} from './engine.mjs?v=hqgd-bq-10a01-v8-6-2';
 export const PERIODS=[{id:'gk1',term:1,key:'mid',label:'Giữa HK1'},{id:'hk1',term:1,key:'final',label:'HK1'},{id:'gk2',term:2,key:'mid',label:'Giữa HK2'},{id:'hk2',term:2,key:'final',label:'HK2'}];
 export function fourPeriods(first=[],second=[]){
  const a=first.length?calculate(first):null,b=second.length?calculate(second):null,map=new Map();

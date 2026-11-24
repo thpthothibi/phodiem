@@ -6,7 +6,7 @@ export function validateScope(rows,year){const classes=schoolClasses(year);retur
 export const norm=s=>String(s??'').normalize('NFC').trim().replace(/\s+/g,' ');
 export function className(s){return norm(s).toUpperCase().replace(/^(10|11|12)A0*(\d+)$/,(_,g,n)=>g+'A'+String(Number(n)).padStart(2,'0'));}
 export function number(s){if(s===null||s===undefined||s==='')return null;let n=Number(String(s).replace(',','.'));return Number.isFinite(n)?n:null;}
-const teacherReference=r=>['10','12'].includes(r.class.slice(0,2))&&['Công nghệ','Cong nghe'].includes(r.subject);
+const teacherReference=r=>r.referenceScope!=='cohort'&&['10','12'].includes(r.class.slice(0,2))&&['Công nghệ','Cong nghe'].includes(r.subject);
 const mean=a=>a.length?a.reduce((s,n)=>s+n,0)/a.length:null;
 // Excel RANK.EQ descending: ties share rank; the next rank has a gap.
 const rank=(v,all)=>v===null?null:1+all.filter(x=>x!==null&&x>v+1e-10).length;
