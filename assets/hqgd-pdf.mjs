@@ -1,5 +1,5 @@
-import {buildHQGD,missingTeacher,cohort} from './hqgd-data.mjs?v=hqgd-cn-gv-v8-6-4';
-import {selectPeriod,periodLabel,requiredPeriods} from './hqgd-period.mjs?v=hqgd-cn-gv-v8-6-4';
+import {buildHQGD,missingTeacher,cohort} from './hqgd-data.mjs?v=hqgd-10a01-va-cn-v8-6-5';
+import {selectPeriod,periodLabel,requiredPeriods} from './hqgd-period.mjs?v=hqgd-10a01-va-cn-v8-6-5';
 const cmp=(a,b)=>String(a).localeCompare(String(b),'vi',{numeric:true});
 const format=v=>v===null||v===undefined?'':Number(Math.abs(v)<0.005?0:v).toLocaleString('vi-VN',{minimumFractionDigits:2,maximumFractionDigits:2});
 const displayTeacher=t=>!t||missingTeacher(t)?'Chưa phân công':t;

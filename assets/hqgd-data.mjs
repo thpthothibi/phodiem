@@ -1,10 +1,10 @@
 // Separate reporting cohorts before computing any baselines, teacher totals or ranks.
-import {SUBJECTS,className} from './hqgd-source/engine.mjs?v=hqgd-cn-gv-v8-6-4';
-import {fourPeriods} from './hqgd-source/four-periods.mjs?v=hqgd-cn-gv-v8-6-4';
+import {SUBJECTS,className} from './hqgd-source/engine.mjs?v=hqgd-10a01-va-cn-v8-6-5';
+import {fourPeriods} from './hqgd-source/four-periods.mjs?v=hqgd-10a01-va-cn-v8-6-5';
 export const PERIODS=['Giữa HK1','HK1','Giữa HK2','HK2'];
 export const missingTeacher=t=>t.startsWith('[Chưa phân công] ');
 const core=s=>['Toán','Ngữ văn','Văn','Giáo dục quốc phòng và an ninh','Công nghệ'].includes(s);
-export function cohort(r,useTNClasses=false){if(Number(r.grade)===10&&r.subject!=='Công nghệ')return className(r.class)==='10A01'?'10A01 — Thống kê riêng':'Các lớp còn lại';const selected=r.thiTN==='Chọn'||(useTNClasses&&r.tnReportChoice==='Chọn');return Number(r.grade)!==12||core(r.subject)?'Chung':useTNClasses&&selected&&r.year==='2026-2027'&&!r.tnClass?'Chọn TN — chưa ghép lớp':selected?'Chọn TN':r.thiTN==='Không chọn'?'Không chọn TN':'Chưa khai báo';}
+export function cohort(r,useTNClasses=false){if(Number(r.grade)===10)return className(r.class)==='10A01'?'10A01 — Thống kê riêng':'Các lớp còn lại';const selected=r.thiTN==='Chọn'||(useTNClasses&&r.tnReportChoice==='Chọn');return Number(r.grade)!==12||core(r.subject)?'Chung':useTNClasses&&selected&&r.year==='2026-2027'&&!r.tnClass?'Chọn TN — chưa ghép lớp':selected?'Chọn TN':r.thiTN==='Không chọn'?'Không chọn TN':'Chưa khai báo';}
 export function buildHQGD(records,assignments,year,grade,{useTNClasses=false}={}){
  if(!grade)return [];
  records=useTNClasses?(globalThis.HTB_TN2027?.hqRows(records)||records):records.map(r=>globalThis.HTB_TN2027?.resolve(r)||r);
