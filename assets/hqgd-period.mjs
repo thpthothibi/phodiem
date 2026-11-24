@@ -52,11 +52,26 @@ export function groupedClassTable(groups,teacher=x=>x){
   rows.push(...classTable({...model,rows:selected},teacher).rows);
   if(model.kind==='annual')continue;
   const ref=model.baselines.find(r=>r.subject===subject);if(!ref)continue;
-  const line=Array(headers.length).fill('');line[0]=subject;line[1]=group.startsWith('10A01')?'Bình quân 10A01':'Bình quân các lớp còn lại';
+  const line=Array(headers.length).fill('');line[0]=subject;line[1]='Bình quân';
   if(model.kind==='combined'){line[3]=ref.mid;line[7]=ref.final;}else line[3]=ref.score;
   rows.push(line);
  }
  return {headers,rows};
+}
+
+// Sum the independent class-reference results into one row per teacher.
+export function combinedTeachers(models){
+ const map=new Map(),rows=models.flatMap(m=>m.rows);
+ for(const m of models)for(const t of m.teachers){
+  const key=JSON.stringify([t.subject,t.teacher]);
+  if(!map.has(key))map.set(key,{...t,classes:[],effect:0,complete:true,rank:null});
+  const out=map.get(key);out.classes.push(...t.classes);out.complete&&=t.effect!==null;
+  if(t.effect!==null)out.effect+=t.effect;
+ }
+ const teachers=[...map.values()];
+ for(const t of teachers){t.classes=[...new Set(t.classes)].sort((a,b)=>a.localeCompare(b,'vi',{numeric:true}));if(!t.complete)t.effect=null;}
+ for(const t of teachers){const peers=teachers.filter(x=>x.subject===t.subject);if(rows.filter(r=>r.subject===t.subject).every(r=>r.assigned&&r.effect!==null)&&peers.every(x=>x.complete))t.rank=rank(t.effect,peers.map(x=>x.effect));}
+ return teachers.sort((a,b)=>a.subject.localeCompare(b.subject,'vi')||a.teacher.localeCompare(b.teacher,'vi'));
 }
 
 export function requiredPeriods(id,combined=false){

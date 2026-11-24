@@ -1,6 +1,6 @@
 // Separate reporting cohorts before computing any baselines, teacher totals or ranks.
-import {SUBJECTS,className} from './hqgd-source/engine.mjs?v=hqgd-bq-10a01-v8-6-2';
-import {fourPeriods} from './hqgd-source/four-periods.mjs?v=hqgd-bq-10a01-v8-6-2';
+import {SUBJECTS,className} from './hqgd-source/engine.mjs?v=hqgd-chung-gv-v8-6-3';
+import {fourPeriods} from './hqgd-source/four-periods.mjs?v=hqgd-chung-gv-v8-6-3';
 export const PERIODS=['Giữa HK1','HK1','Giữa HK2','HK2'];
 export const missingTeacher=t=>t.startsWith('[Chưa phân công] ');
 const core=s=>['Toán','Ngữ văn','Văn','Giáo dục quốc phòng và an ninh','Công nghệ'].includes(s);

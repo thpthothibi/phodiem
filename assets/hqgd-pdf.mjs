@@ -1,5 +1,5 @@
-import {buildHQGD,missingTeacher,cohort} from './hqgd-data.mjs?v=hqgd-bq-10a01-v8-6-2';
-import {selectPeriod,periodLabel,requiredPeriods} from './hqgd-period.mjs?v=hqgd-bq-10a01-v8-6-2';
+import {buildHQGD,missingTeacher,cohort} from './hqgd-data.mjs?v=hqgd-chung-gv-v8-6-3';
+import {selectPeriod,periodLabel,requiredPeriods} from './hqgd-period.mjs?v=hqgd-chung-gv-v8-6-3';
 const cmp=(a,b)=>String(a).localeCompare(String(b),'vi',{numeric:true});
 const format=v=>v===null||v===undefined?'':Number(Math.abs(v)<0.005?0:v).toLocaleString('vi-VN',{minimumFractionDigits:2,maximumFractionDigits:2});
 const displayTeacher=t=>!t||missingTeacher(t)?'Chưa phân công':t;
@@ -50,7 +50,7 @@ export function classTable(section,job){
  if(annual){return {head:[[{content:'Lớp',rowSpan:2},{content:'Giáo viên HK1 / HK2',rowSpan:2},{content:section.group==='Chọn TN'?'Sĩ số':'HS có điểm',rowSpan:2},{content:'Học kỳ 1',colSpan:3},{content:'Học kỳ 2',colSpan:3},{content:'HQ cả năm',rowSpan:2},{content:'Hạng',rowSpan:2}],['ĐL GK','ĐL HK','HQ HK1','ĐL GK','ĐL HK','HQ HK2']],body:section.rows.sort((a,b)=>cmp(a.class,b.class)).map(r=>[displayClass(r.class,section.group),displayTeacher(r.teacher1)+(r.teacher1===r.teacher2?'':' / '+displayTeacher(r.teacher2)),studentCount(section,r,job.period,job.combined),...['dgk1','dhk1','effect1','dgk2','dhk2','effect2','effect','rank'].map(k=>k==='rank'?r[k]??'':format(r[k]))]),widths:[16,44,19,14,14,15,14,14,15,16,13]};}
  const mid=job.period.startsWith('gk'),both=model.kind==='combined',b=section.baseline;
  const rowData=r=>[displayClass(r.class,section.group),displayTeacher(r.teacher),studentCount(section,r,job.period,job.combined),...(both||mid?[format(r.mid),format(r.deltaMid),both?r.rankMid??'':r.rank??'']:['','','']),...(!mid?[format(r.final),format(r.deltaFinal),both?r.rankFinal??'':r.rank??'']:['','','']),format(r.effect),r.rank??''];
- const referenceRow=ref=>[{content:section.grade==='10'?(section.group.startsWith('10A01')?'Bình quân 10A01':'Bình quân các lớp còn lại'):ref.referenceByTeacher?'Bình quân':'K'+section.grade,colSpan:3,styles:{halign:'left'}},both||mid?format(ref.mid):'','','',!mid?format(ref.final):'','','','',''];
+ const referenceRow=ref=>[{content:section.grade==='10'?'Bình quân':ref.referenceByTeacher?'Bình quân':'K'+section.grade,colSpan:3,styles:{halign:'left'}},both||mid?format(ref.mid):'','','',!mid?format(ref.final):'','','','',''];
  const references=model.baselines.filter(x=>x.subject===job.subject&&(!x.referenceByTeacher||!missingTeacher(x.teacher||''))),body=[],baselineRows=[];
  const technology=job.subject==='Công nghệ'&&section.rows.some(r=>r.referenceByTeacher);
  if(technology){
@@ -61,7 +61,7 @@ export function classTable(section,job){
  const baselineStart=baselineRows[0]??body.length;
  return {baselineStart,baselineRows,head:[[{content:'Lớp',rowSpan:2},{content:'Giáo viên',rowSpan:2},{content:section.group==='Chọn TN'?'Sĩ số':'HS có điểm',rowSpan:2},{content:'Điểm kiểm tra giữa kỳ '+term,colSpan:3},{content:'Điểm kiểm tra học kỳ '+term,colSpan:3},{content:'Hiệu quả',rowSpan:2},{content:'Hạng',rowSpan:2}],['BQ','ĐL','XH','BQ','ĐL','XH']],body,widths:[17,48,15,15,15,10,15,15,10,17,12]};
 }
-function teacherGroups(job){const groups=new Map();for(const section of job.sections){if(!groups.has(section.group))groups.set(section.group,[]);groups.get(section.group).push(section);}return [...groups].map(([group,sections])=>{
+export function teacherGroups(job){const groups=new Map();for(const section of job.sections){const group=section.grade==='10'?'Chung':section.group;if(!groups.has(group))groups.set(group,[]);groups.get(group).push(section);}return [...groups].map(([group,sections])=>{
  const byTeacher=new Map();for(const s of sections)for(const t of s.teachers){if(job.klass&&!s.rows.some(r=>r.teacher===t.teacher||r.teacher1===t.teacher||r.teacher2===t.teacher))continue;if(!byTeacher.has(t.teacher))byTeacher.set(t.teacher,{teacher:t.teacher,effect:0,rank:null,details:[],complete:true,referenceByTeacher:!!t.referenceByTeacher});const item=byTeacher.get(t.teacher);item.referenceByTeacher||=!!t.referenceByTeacher;item.complete&&=t.effect!==null;if(t.effect!==null)item.effect+=t.effect;
  // Keep teacher totals over all classes in the export grade scope; class filter changes visible detail only.
  const source=s.model.rows.filter(r=>r.subject===job.subject&&(r.teacher===t.teacher||r.teacher1===t.teacher||r.teacher2===t.teacher)&&(!job.klass||r.class===job.klass));item.details.push(...source);}
