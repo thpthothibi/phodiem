@@ -1,5 +1,6 @@
-import {buildHQGD,missingTeacher,cohort} from './hqgd-data.mjs?v=hqgd-10a01-va-cn-v8-6-5';
-import {selectPeriod,periodLabel,requiredPeriods} from './hqgd-period.mjs?v=hqgd-10a01-va-cn-v8-6-5';
+import {MERGE_TEACHERS} from './report-variant.mjs?v=hqgd-export-choice-v8-6-8';
+import {buildHQGD,missingTeacher,cohort} from './hqgd-data.mjs?v=hqgd-export-choice-v8-6-8';
+import {selectPeriod,periodLabel,requiredPeriods} from './hqgd-period.mjs?v=hqgd-export-choice-v8-6-8';
 const cmp=(a,b)=>String(a).localeCompare(String(b),'vi',{numeric:true});
 const format=v=>v===null||v===undefined?'':Number(Math.abs(v)<0.005?0:v).toLocaleString('vi-VN',{minimumFractionDigits:2,maximumFractionDigits:2});
 const displayTeacher=t=>!t||missingTeacher(t)?'Chưa phân công':t;
@@ -61,23 +62,23 @@ export function classTable(section,job){
  const baselineStart=baselineRows[0]??body.length;
  return {baselineStart,baselineRows,head:[[{content:'Lớp',rowSpan:2},{content:'Giáo viên',rowSpan:2},{content:section.group==='Chọn TN'?'Sĩ số':'HS có điểm',rowSpan:2},{content:'Điểm kiểm tra giữa kỳ '+term,colSpan:3},{content:'Điểm kiểm tra học kỳ '+term,colSpan:3},{content:'Hiệu quả',rowSpan:2},{content:'Hạng',rowSpan:2}],['BQ','ĐL','XH','BQ','ĐL','XH']],body,widths:[17,48,15,15,15,10,15,15,10,17,12]};
 }
-export function teacherGroups(job){const groups=new Map();for(const section of job.sections){const group=section.grade==='10'?'Chung':section.group;if(!groups.has(group))groups.set(group,[]);groups.get(group).push(section);}return [...groups].map(([group,sections])=>{
+export function teacherGroups(job,{merge=MERGE_TEACHERS}={}){const groups=new Map();for(const section of job.sections){const group=merge?'Tổng hợp':section.grade==='10'?'Chung':section.group;if(!groups.has(group))groups.set(group,[]);groups.get(group).push(section);}return [...groups].map(([group,sections])=>{
  const byTeacher=new Map();for(const s of sections)for(const t of s.teachers){if(job.klass&&!s.rows.some(r=>r.teacher===t.teacher||r.teacher1===t.teacher||r.teacher2===t.teacher))continue;if(!byTeacher.has(t.teacher))byTeacher.set(t.teacher,{teacher:t.teacher,effect:0,rank:null,details:[],complete:true,referenceByTeacher:!!t.referenceByTeacher});const item=byTeacher.get(t.teacher);item.referenceByTeacher||=!!t.referenceByTeacher;item.complete&&=t.effect!==null;if(t.effect!==null)item.effect+=t.effect;
  // Keep teacher totals over all classes in the export grade scope; class filter changes visible detail only.
- const source=s.model.rows.filter(r=>r.subject===job.subject&&(r.teacher===t.teacher||r.teacher1===t.teacher||r.teacher2===t.teacher)&&(!job.klass||r.class===job.klass));item.details.push(...source);}
+ const source=s.model.rows.filter(r=>r.subject===job.subject&&(r.teacher===t.teacher||r.teacher1===t.teacher||r.teacher2===t.teacher)&&(!job.klass||r.class===job.klass));item.details.push(...source.map(r=>({...r,reportGroup:s.group,reportClass:displayClass(r.class,s.group)})));}
  const teachers=[...byTeacher.values()].sort((a,b)=>cmp(a.teacher,b.teacher));for(const t of teachers)if(!t.complete)t.effect=null;
  const complete=sections.every(s=>s.model.rows.filter(r=>r.subject===job.subject).every(r=>r.complete&&r.assigned))&&teachers.every(t=>t.complete);
  for(const t of teachers)t.rank=complete&&!t.referenceByTeacher?rank(t.effect,teachers.map(x=>x.effect)):null;
  return {group,teachers,complete};});}
-function teacherTable(group,job){const annual=job.period==='annual',mid=job.period.startsWith('gk'),both=job.period.startsWith('hk')&&job.combined,body=[];
- group.teachers.forEach((t,i)=>{t.details.sort((a,b)=>cmp(a.class,b.class));t.details.forEach((r,j)=>{const row=[];if(j===0)row.push({content:String(i+1),rowSpan:t.details.length},{content:t.teacher,rowSpan:t.details.length});row.push(displayClass(r.class,group.group));
+export function teacherTable(group,job){const annual=job.period==='annual',mid=job.period.startsWith('gk'),both=job.period.startsWith('hk')&&job.combined,body=[];
+ group.teachers.forEach((t,i)=>{t.details.sort((a,b)=>cmp(a.class,b.class));t.details.forEach((r,j)=>{const row=[];if(j===0)row.push({content:String(i+1),rowSpan:t.details.length},{content:t.teacher,rowSpan:t.details.length});const name=r.reportClass||displayClass(r.class,r.reportGroup||group.group),duplicate=t.details.some(x=>x!==r&&(x.reportClass||x.class)===name&&x.reportGroup!==r.reportGroup);row.push(name+(duplicate?' ('+(r.reportGroup==='Chọn TN'?'TN':r.reportGroup==='Không chọn TN'?'không TN':r.reportGroup)+')':''));
  if(annual){row.push(format(r.teacher1===t.teacher?r.effect1:null),format(r.teacher2===t.teacher?r.effect2:null),format(r.total));}
  else row.push(both||mid?format(r.mid):'',!mid?format(r.final):'',both||mid?format(r.deltaMid):'',!mid?format(r.deltaFinal):'',format(r.effect));
  if(j===0)row.push({content:format(t.effect),rowSpan:t.details.length},{content:t.rank??'',rowSpan:t.details.length});body.push(row);});});
  if(annual)return {head:[['TT','Giáo viên','Lớp','HQ HK1','HQ HK2','HQ lớp cả năm','HQ GV cả năm','Hạng']],body,widths:[9,50,18,23,23,23,25,18]};
  return {head:[[{content:'TT',rowSpan:2},{content:'Giáo viên',rowSpan:2},{content:'Lớp',rowSpan:2},{content:'Bình quân điểm số',colSpan:2},{content:'Hiệu quả giảng dạy',colSpan:2},{content:'Hiệu quả lớp',rowSpan:2},{content:'Hiệu quả chung',rowSpan:2},{content:'Hạng',rowSpan:2}],['GK','HK','GK','HK']],body,widths:[9,45,17,17,17,17,17,18,19,13]};
 }
-export function createHQGDPDF(jobs,{jsPDF,font,fonts,onTeacherPage}){
+export function createHQGDPDF(jobs,{jsPDF,font,fonts,onTeacherPage,mergeTeachers=MERGE_TEACHERS}){
  if(!jobs.length)throw Error('Không có dữ liệu phù hợp để xuất.');if((!fonts&&!font)||!jsPDF)throw Error('Chưa tải đủ thư viện PDF hoặc phông tiếng Việt.');
  const doc=new jsPDF({orientation:'portrait',unit:'mm',format:'a4',compress:true});const regular=fonts?.normal||font,bold=fonts?.bold||font;doc.addFileToVFS('HTB-VN.ttf',regular);doc.addFileToVFS('HTB-VN-Bold.ttf',bold);doc.addFont('HTB-VN.ttf','VN','normal');doc.addFont('HTB-VN-Bold.ttf','VN','bold');doc.setFont('VN');doc.setProperties({title:'Báo cáo HQGD theo môn',creator:'HTB Phổ Điểm'});
  const blue=[236,241,248],green=[219,232,187],pages=new Map();let currentJob=null;
@@ -86,12 +87,12 @@ export function createHQGDPDF(jobs,{jsPDF,font,fonts,onTeacherPage}){
  jobs.forEach((job,index)=>{if(index)doc.addPage();currentJob=job;pageHeader();let y=33;doc.setFontSize(9);doc.setFont('VN','bold');doc.text('1. Kết quả khối, lớp',12,y);y+=5;
  for(const section of classSections(job)){if(y>244){doc.addPage();pageHeader();y=34;}doc.setFont('VN','bold');doc.setFontSize(8.5);doc.text('Khối '+section.grade+' - '+section.group,12,y);y=runTable(classTable(section,job),y+2,true)+8;}
  if(!job.sections.length)return;
- const teacherStart=doc.getNumberOfPages()+1,groups=teacherGroups(job);
+ const teacherStart=doc.getNumberOfPages()+1,groups=teacherGroups(job,{merge:mergeTeachers});
  const densities=[{fontSize:7.6,padding:1.1,gap:6},{fontSize:7.2,padding:.8,gap:4},{fontSize:6.8,padding:.6,gap:3},{fontSize:6.4,padding:.4,gap:2.5},{fontSize:6,padding:.25,gap:2},{fontSize:5.8,padding:.1,gap:1.5}];
  let fitted=false;
  for(const density of densities){
   doc.addPage();pageHeader();y=33;doc.setFont('VN','bold');doc.setFontSize(9);doc.text('2. Kết quả giáo viên',12,y);y+=6;
-  for(const group of groups){doc.setFont('VN','bold');doc.setFontSize(Math.max(7,density.fontSize));doc.text(group.group+' - Tổng hợp trong các khối xuất báo cáo',12,y);y+=3;
+  for(const group of groups){doc.setFont('VN','bold');doc.setFontSize(Math.max(7,density.fontSize));doc.text(mergeTeachers?'Tổng hợp theo giáo viên trong các khối xuất báo cáo':group.group+' - Tổng hợp trong các khối xuất báo cáo',12,y);y+=3;
    if(!group.teachers.length){doc.setFont('VN','normal');doc.setFontSize(density.fontSize);doc.text('Chưa có phân công giáo viên trong phạm vi này.',12,y+3);y+=9;}else y=runTable(teacherTable(group,job),y+1,false,density)+density.gap;
   }
   if(doc.getNumberOfPages()===teacherStart&&y<=280){fitted=true;onTeacherPage?.({subject:job.subject,page:teacherStart,fontSize:density.fontSize,rows:groups.reduce((n,g)=>n+g.teachers.reduce((v,t)=>v+t.details.length,0),0)});break;}
