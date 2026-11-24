@@ -1,0 +1,16 @@
+GÓI CẬP NHẬT TRỰC TIẾP – HQGD V8.6.2
+
+Website trực tuyến kiểm tra ngày 24/11/2026 còn tải hqgd.js?v=tn-cn-complete-v8-5. Kết quả Công nghệ 10A01 còn độ lệch 0,74. Đây là mã V8.5, chưa phải bộ file sửa.
+
+1. Giải nén gói này.
+2. Trên GitHub, mở đúng thư mục hiện chứa index.html của trang phodiem.
+3. Đưa index.html, assets/ và các mục cùng cấp TRONG GÓI NÀY vào đó, ghi đè file hiện có. Không đưa thêm thư mục web/ hoặc deploy_ready/ vào bên trong thư mục đang phục vụ trang. Không chỉ tải file ZIP lên GitHub.
+4. Commit thay đổi và chờ GitHub Pages triển khai thành công.
+5. Mở trang, Ctrl+F5, vào Hiệu quả giảng dạy. Phải thấy nhãn: HQGD V8.6.2 · CHUNG BẢNG, BQ 10A01 RIÊNG.
+6. Chọn Khối 10, môn và kỳ có điểm, rồi tạo PDF MỚI. Không mở lại file PDF cũ đã tải.
+
+Nếu không thấy nhãn phiên bản thì chưa có bằng chứng website đang chạy file mới; kiểm tra lại thư mục hoặc nguồn triển khai GitHub Pages. Ctrl+F5 không thể thay mã trên máy chủ nếu chưa cập nhật file.
+
+Bảng kết quả lớp: 10A01 → Bình quân 10A01 → các lớp còn lại theo thứ tự → Bình quân các lớp còn lại. Chỉ xuất các lớp có môn học đó; ví dụ Công nghệ có thể tiếp ngay 10A05, do 10A02–10A04 không có điểm Công nghệ trong dữ liệu.
+
+Không cần chỉnh D1 hoặc Worker cho thay đổi này. Gói này chỉ có nội dung website công khai. Chưa được triển khai thay người dùng.
